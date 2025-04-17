@@ -7,16 +7,20 @@ export LANGUAGE=C.UTF-8
 set -e
 
 # Color definitions
-RED='🔴\e[31m'
-GREEN='🟢\e[32m'
-YELLOW='🟡\e[33m'
-BLUE='🔵\e[34m'
-MAGENTA='🟣\e[35m'
-CYAN='🔷\e[36m'
+RED='\e[31m'
+YELLOW='\e[33m'
+GREEN='\e[32m'
+BLUE='\e[34m'
+MAGENTA='\e[35m'
+CYAN='\e[36m'
+ERROR='🔴 \e[31m'
+WARNING='🟡 \e[33m'
+INFO='🔷\e[36m'
+OK='🟢 \e[32m'
 RESET='\e[0m'
 
 # Signal handling to inform the user and kill processes
-trap 'echo -e "${RED}Script interrupted. Servers that have already started will continue running.${RESET}"; pkill -P $$; exit 1' SIGINT SIGTERM
+trap 'echo -e "${ERROR}Script interrupted. Servers that have already started will continue running.${RESET}"; pkill -P $$; exit 1' SIGINT SIGTERM
 
 # Base directory for all instances
 BASE_DIR="$(cd "$(dirname "$(realpath "$0")")" && pwd)"
@@ -61,7 +65,7 @@ check_dependencies() {
         package_manager="pacman"
         dependencies=("wget" "tar" "grep" "lib32-libx11" "gcc-multilib" "lib32-expat" "lib32-libxext" "python" "freetype2" "cronie")
     else
-        log_message "${RED}Error: No supported package manager found on this system.${RESET}"
+        log_message "${ERROR}Error: No supported package manager found on this system.${RESET}"
         exit 1
     fi
 
@@ -102,8 +106,8 @@ check_dependencies() {
             return
         fi
 
-        log_message "${RED}Warning: The following required packages are missing: ${missing[*]}${RESET}"
-        log_message "${CYAN}Please install them using the appropriate command for your system:${RESET}"
+        log_message "${WARNING}Warning: The following required packages are missing: ${missing[*]}${RESET}"
+        log_message "${INFO}Please install them using the appropriate command for your system:${RESET}"
         case $package_manager in
             "apt-get")
                 log_message "${MAGENTA}sudo dpkg --add-architecture i386${RESET}"
@@ -139,19 +143,19 @@ check_dependencies() {
         log_message "${YELLOW}Continue anyway?${RESET} ${RED}(not recommended)${RESET} ${YELLOW}[y/N]${RESET}"
         read -r response
         if [[ ! $response =~ ^[Yy]$ ]]; then
-            log_message "${RED}Exiting due to missing dependencies.${RESET}"
+            log_message "${ERROR}Exiting due to missing dependencies.${RESET}"
             exit 1
         fi
 
         echo
-        log_message "${YELLOW}Do you want to suppress this warning in the future? [y/N]${RESET}"
+        log_message "${WARNING}Do you want to suppress this warning in the future? [y/N]${RESET}"
         read -r suppress_response
         if [[ $suppress_response =~ ^[Yy]$ ]]; then
             log_message "SUPPRESS_DEPENDENCY_WARNINGS=true" >> "$config_file"
-            log_message "${GREEN}Dependency warnings will be suppressed in future runs.${RESET}"
+            log_message "${OK}Dependency warnings will be suppressed in future runs.${RESET}"
         fi
 
-        log_message "${YELLOW}Continuing despite missing dependencies...${RESET}"
+        log_message "${WARNING}Continuing despite missing dependencies...${RESET}"
     fi
 }
 
@@ -163,8 +167,8 @@ check_executables() {
     local required_files=("$RCON_SCRIPT" "$ARK_RESTART_MANAGER" "$ARK_INSTANCE_MANAGER")
     for file in "${required_files[@]}"; do
         if [ ! -x "$file" ]; then
-            log_message "${RED}Error: Required file '$file' is not executable.${RESET}"
-            log_message "${CYAN}Run 'chmod +x $file' to fix this issue.${RESET}"
+            log_message "${ERROR}Error: Required file '$file' is not executable.${RESET}"
+            log_message "${INFO}Run 'chmod +x $file' to fix this issue.${RESET}"
             exit 1
         fi
     done
@@ -237,7 +241,7 @@ check_for_duplicate_ports() {
                 # Check for conflicts
                 if [ "$game_port" != "NULL" ]; then
                     if [ -n "${port_occurrences[$game_port]}" ]; then
-                        log_message "${RED}Conflict: Game port $game_port is used by both '${port_occurrences[$game_port]}' and '$instance_name'.${RESET}"
+                        log_message "${ERROR}Conflict: Game port $game_port is used by both '${port_occurrences[$game_port]}' and '$instance_name'.${RESET}"
                         duplicates_found=true
                     else
                         port_occurrences[$game_port]="$instance_name"
@@ -246,7 +250,7 @@ check_for_duplicate_ports() {
 
                 if [ "$rcon_port" != "NULL" ]; then
                     if [ -n "${rcon_occurrences[$rcon_port]}" ]; then
-                        log_message "${RED}Conflict: RCON port $rcon_port is used by both '${rcon_occurrences[$rcon_port]}' and '$instance_name'.${RESET}"
+                        log_message "${ERROR}Conflict: RCON port $rcon_port is used by both '${rcon_occurrences[$rcon_port]}' and '$instance_name'.${RESET}"
                         duplicates_found=true
                     else
                         rcon_occurrences[$rcon_port]="$instance_name"
@@ -255,7 +259,7 @@ check_for_duplicate_ports() {
 
                 if [ "$query_port" != "NULL" ]; then
                     if [ -n "${query_occurrences[$query_port]}" ]; then
-                        log_message "${RED}Conflict: Query port $query_port is used by both '${query_occurrences[$query_port]}' and '$instance_name'.${RESET}"
+                        log_message "${ERROR}Conflict: Query port $query_port is used by both '${query_occurrences[$query_port]}' and '$instance_name'.${RESET}"
                         duplicates_found=true
                     else
                         query_occurrences[$query_port]="$instance_name"
@@ -266,10 +270,10 @@ check_for_duplicate_ports() {
     done
 
     if [ "$duplicates_found" = true ]; then
-        log_message "${RED}Port duplicates were found. Please correct the ports in the instance_config.ini files.${RESET}"
+        log_message "${ERROR}Port duplicates were found. Please correct the ports in the instance_config.ini files.${RESET}"
         return 1
     else
-        log_message "${GREEN}No duplicate ports found.${RESET}"
+        log_message "${OK}No duplicate ports found.${RESET}"
         return 0
     fi
 }
@@ -296,7 +300,7 @@ install_base_server() {
         if [ -d "$instance" ]; then
             local instance_name=$(basename "$instance")
             if is_server_running "$instance_name"; then
-                log_message "${RED}Instance '$instance_name' is currently running. Please stop all instances before updating the base server.${RESET}"
+                log_message "${ERROR}Instance '$instance_name' is currently running. Please stop all instances before updating the base server.${RESET}"
                 ((running_instances++))
             fi
         fi
@@ -306,11 +310,11 @@ install_base_server() {
 
     # Check if any instances were running
     if [ "$running_instances" -gt 0 ]; then
-        log_message "${YELLOW}Base server update skipped because $running_instances instance(s) are running.${RESET}"
+        log_message "${WARNING}Base server update skipped because $running_instances instance(s) are running.${RESET}"
         return 0
     fi
 
-    log_message "${CYAN}Installing/updating base server...${RESET}"
+    log_message "${INFO}Installing/updating base server...${RESET}"
 
     # Create necessary directories
     mkdir -p "$STEAMCMD_DIR" "$PROTON_DIR" "$SERVER_FILES_DIR"
@@ -365,12 +369,12 @@ install_base_server() {
         sleep 60
         # Stop the server
         pkill -f "ArkAscendedServer.exe.*TheIsland_WP" || true
-        log_message "${GREEN}Initial server start completed.${RESET}"
+        log_message "${OK}Initial server start completed.${RESET}"
     else
-        log_message "${GREEN}Server configuration directory already exists. Skipping initial server start.${RESET}"
+        log_message "${OK}Server configuration directory already exists. Skipping initial server start.${RESET}"
     fi
 
-    log_message "${GREEN}Base server installation/update completed.${RESET}"
+    log_message "${OK}Base server installation/update completed.${RESET}"
 }
 
 # Function to initialize Proton prefix
@@ -383,7 +387,7 @@ initialize_proton_prefix() {
     # Copy the default Proton prefix
     cp -r "$PROTON_DIR/files/share/default_pfx/." "$proton_prefix/"
 
-    log_message "${GREEN}Proton prefix initialized.${RESET}"
+    log_message "${OK}Proton prefix initialized.${RESET}"
 }
 
 # Function to populate an array with available instances from INSTANCES_DIR
@@ -410,7 +414,7 @@ list_instances() {
     get_available_instances
 
     if [ ${#available_instances[@]} -eq 0 ]; then
-        log_message "${RED}No instances found in '$INSTANCES_DIR'.${RESET}"
+        log_message "${ERROR}No instances found in '$INSTANCES_DIR'.${RESET}"
         return
     fi
 
@@ -428,7 +432,7 @@ edit_instance_config() {
 
     # Create instance directory if it doesn't exist
     if [ ! -d "$INSTANCES_DIR/$instance" ]; then
-        log_message "${GREEN}No instance directory found. Created for '$instance'${RESET}"
+        log_message "${INFO}No instance directory found. Created for '$instance'${RESET}"
         mkdir -p "$INSTANCES_DIR/$instance"
     fi
 
@@ -440,7 +444,7 @@ edit_instance_config() {
 
     # Create config file if it doesn't exist
     if [ ! -f "$config_file" ]; then
-        log_message "${GREEN}Create config file for '$instance'${RESET}"
+        log_message "${INFO}Create config file for '$instance'${RESET}"
         cat <<EOF > "$config_file"
 [ServerSettings]
 ServerName=$instance
@@ -464,7 +468,7 @@ EOF
      # Create an empty Game.ini, if it doesnt exist
     if [ ! -f "$game_ini_file" ]; then
         touch "$game_ini_file"
-        log_message "${GREEN}Empty Game.ini for '$instance' Created. Optional: Edit it for your needs${RESET}"
+        log_message "${INFO}Empty Game.ini for '$instance' Created. Optional: Edit it for your needs${RESET}"
     fi
 
 	log_message "${GREEN}Open instance config file for '$instance'${RESET}"
@@ -477,7 +481,7 @@ EOF
     elif command -v vim >/dev/null 2>&1; then
         vim "$config_file"
     else
-        log_message "${RED}No suitable text editor found. Please edit $config_file manually.${RESET}"
+        log_message "${ERROR}No suitable text editor found. Please edit $config_file manually.${RESET}"
     fi
 }
 
@@ -487,7 +491,7 @@ load_instance_config() {
     local config_file="$INSTANCES_DIR/$instance/instance_config.ini"
 
     if [ ! -f "$config_file" ]; then
-        log_message "${RED}Configuration file for instance $instance not found.${RESET}"
+        log_message "${ERROR}Configuration file for instance $instance not found.${RESET}"
         return 1
     fi
 
@@ -512,21 +516,21 @@ load_instance_config() {
 create_instance() {
     # Check if the directory exists
     if [ ! -d "$SERVER_FILES_DIR/ShooterGame/Saved/Config/WindowsServer/" ]; then
-        log_message "${RED}The required directory does not exist: $SERVER_FILES_DIR/ShooterGame/Saved/Config/WindowsServer/${RESET}"
-        log_message "${YELLOW}Cannot proceed with instance creation.You need to install Base Server first${RESET}"
+        log_message "${ERROR}The required directory does not exist: $SERVER_FILES_DIR/ShooterGame/Saved/Config/WindowsServer/${RESET}"
+        log_message "${WARNING}Cannot proceed with instance creation.You need to install Base Server first${RESET}"
         return
     fi
 
     while true; do
-        log_message "${CYAN}Enter the name for the new instance (or type 'cancel' to abort):${RESET}"
+        log_message "${INFO}Enter the name for the new instance (or type 'cancel' to abort):${RESET}"
         read -r instance_name
         if [ "$instance_name" = "cancel" ]; then
-            log_message "${YELLOW}Instance creation cancelled.${RESET}"
+            log_message "${WARNING}Instance creation cancelled.${RESET}"
             return
         elif [ -z "$instance_name" ]; then
-            log_message "${RED}Instance name cannot be empty.${RESET}"
+            log_message "${ERROR}Instance name cannot be empty.${RESET}"
         elif [ -d "$INSTANCES_DIR/$instance_name" ]; then
-            log_message "${RED}Instance already exists.${RESET}"
+            log_message "${ERROR}Instance already exists.${RESET}"
         else
             mkdir -p "$INSTANCES_DIR/$instance_name"
             edit_instance_config "$instance_name"
@@ -550,7 +554,7 @@ select_instance() {
     done
 
     if [ ${#instances[@]} -eq 0 ]; then
-        log_message "${RED}No instances found.${RESET}"
+        log_message "${ERROR}No instances found.${RESET}"
         return 1
     fi
 
@@ -561,10 +565,10 @@ select_instance() {
             log_message "${GREEN}You have selected: $selected_instance${RESET}"
             return 0
         elif [ "$REPLY" -eq $((${#instances[@]} + 1)) ]; then
-            log_message "${YELLOW}Operation cancelled.${RESET}"
+            log_message "${WARNING}Operation cancelled.${RESET}"
             return 1
         else
-            log_message "${RED}Invalid selection.${RESET}"
+            log_message "${ERROR}Invalid selection.${RESET}"
         fi
     done
 }
@@ -574,12 +578,12 @@ start_server() {
     local instance=$1
     # Check for duplicate ports
     if ! check_for_duplicate_ports; then
-        log_message "${YELLOW}Port conflicts detected. Server start aborted.${RESET}"
+        log_message "${WARNING}Port conflicts detected. Server start aborted.${RESET}"
         return 1
     fi
 
     if is_server_running "$instance"; then
-        log_message "${YELLOW}Server for instance $instance is already running.${RESET}"
+        log_message "${WARNING}Server for instance $instance is already running.${RESET}"
         return 0
     fi
 
@@ -639,7 +643,7 @@ start_server() {
     -mods="$MOD_IDS" \
     > "$INSTANCES_DIR/$instance/server.log" 2>&1 &
 
-    log_message "${GREEN}Server started for instance: $instance. It should be fully operational in approximately 60 seconds.${RESET}"
+    log_message "${OK}Server started for instance: $instance. It should be fully operational in approximately 60 seconds.${RESET}"
 }
 
 # Function to stop the server
@@ -647,7 +651,7 @@ stop_server() {
     local instance="$1"
 
     if ! is_server_running "$instance"; then
-        log_message "${YELLOW}Server for instance $instance is not running.${RESET}"
+        log_message "${WARNING}Server for instance $instance is not running.${RESET}"
         return 0
     fi
 
@@ -656,7 +660,7 @@ stop_server() {
     # Save world before stopping
     save_instance "$instance"
 
-    log_message "${GREEN}Attempting graceful shutdown for instance $instance...${RESET}"
+    log_message "${INFO}Attempting graceful shutdown for instance $instance...${RESET}"
 
     # Send the "DoExit" command and capture the response
     local response
@@ -665,7 +669,7 @@ stop_server() {
     # Check if the response matches "Exiting..."
     #if [[ "$response" == "Exiting..." ]]; then
 	if echo "$response" | grep -qi "Exiting..."; then	
-        log_message "${GREEN}Server instance $instance reported 'Exiting...'. Awaiting shutdown...${RESET}"
+        log_message "${OK}Server instance $instance reported 'Exiting...'. Awaiting shutdown...${RESET}"
 
         # Check in a loop if the process is still running
         local timeout=120  # Give 30 seconds
@@ -675,18 +679,18 @@ stop_server() {
             sleep 2
             (( waited+=2 ))
             if [ $waited -ge $timeout ]; then
-                log_message "${RED}Server $instance didn't shut down within $timeout seconds. Forcing kill...${RESET}"
+                log_message "${ERROR}Server $instance didn't shut down within $timeout seconds. Forcing kill...${RESET}"
                 pkill -f "ArkAscendedServer.exe.*AltSaveDirectoryName=$SAVE_DIR"
                 break
             fi
         done
 
-        log_message "${GREEN}Server for instance $instance has exited (or was force-killed).${RESET}"
+        log_message "${OK}Server for instance $instance has exited (or was force-killed).${RESET}"
         #return 0
     else
-        log_message "${RED}Graceful shutdown failed or timed out. Forcing shutdown.${RESET}"
+        log_message "${ERROR}Graceful shutdown failed or timed out. Forcing shutdown.${RESET}"
         pkill -f "ArkAscendedServer.exe.*AltSaveDirectoryName=$SAVE_DIR" || true
-        log_message "${GREEN}Server for instance $instance has been forcefully stopped.${RESET}"
+        log_message "${OK}Server for instance $instance has been forcefully stopped.${RESET}"
         #return 0
     fi
 	
@@ -694,9 +698,9 @@ stop_server() {
     log_message "${CYAN}Creating backup after stopping instance '$instance'...${RESET}"
     backup_instance_world "$instance"
     if [ $? -ne 0 ]; then
-        log_message "${RED}❌ Backup failed or skipped.${RESET}"
+        log_message "${ERROR}❌ Backup failed or skipped.${RESET}"
     else
-        log_message "${GREEN}✅ Backup completed after shutdown.${RESET}"
+        log_message "${OK}✅ Backup completed after shutdown.${RESET}"
     fi
     # ------------------------------
 
@@ -708,7 +712,7 @@ start_rcon_cli() {
     local instance=$1
 
     if ! is_server_running "$instance"; then
-        log_message "${YELLOW}Server for instance $instance is not running.${RESET}"
+        log_message "${WARNING}Server for instance $instance is not running.${RESET}"
         return 0
     fi
 
@@ -718,7 +722,7 @@ start_rcon_cli() {
 
     # Use the new RCON-Client
     "$RCON_SCRIPT" "localhost:$RCON_PORT" -p "$ADMIN_PASSWORD" || {
-        log_message "${RED}Failed to start RCON CLI for instance $instance.${RESET}"
+        log_message "${ERROR}Failed to start RCON CLI for instance $instance.${RESET}"
         return 1
     }
 
@@ -729,31 +733,31 @@ start_rcon_cli() {
 change_map() {
     local instance=$1
     load_instance_config "$instance" || return 1
-    log_message "${CYAN}Current map: $MAP_NAME${RESET}"
-    log_message "${CYAN}Enter the new map name (or type 'cancel' to abort):${RESET}"
+    log_message "${INFO}Current map: $MAP_NAME${RESET}"
+    log_message "${INFO}Enter the new map name (or type 'cancel' to abort):${RESET}"
     read -r new_map_name
     if [[ "$new_map_name" == "cancel" ]]; then
-        log_message "${YELLOW}Map change aborted.${RESET}"
+        log_message "${WARNING}Map change aborted.${RESET}"
         return 0
     fi
     sed -i "s/MapName=.*/MapName=$new_map_name/" "$INSTANCES_DIR/$instance/instance_config.ini"
-    log_message "${GREEN}Map changed to $new_map_name. Restart the server for changes to take effect.${RESET}"
+    log_message "${OK}Map changed to $new_map_name. Restart the server for changes to take effect.${RESET}"
 }
 
 # Function to change mods
 change_mods() {
     local instance=$1
     load_instance_config "$instance" || return 1
-    log_message "${CYAN}Current mods: $MOD_IDS${RESET}"
-    log_message "${CYAN}Enter the new mod IDs (comma-separated, or type 'cancel' to abort):${RESET}"
+    log_message "${INFO}Current mods: $MOD_IDS${RESET}"
+    log_message "${INFO}Enter the new mod IDs (comma-separated, or type 'cancel' to abort):${RESET}"
     #read -r new_mod_ids
     read -r -e -i "$MOD_IDS" new_mod_ids
     if [[ "$new_mod_ids" == "cancel" ]]; then
-        log_message "${YELLOW}Mod change aborted.${RESET}"
+        log_message "${WARNING}Mod change aborted.${RESET}"
         return 0
     fi
     sed -i "s/ModIDs=.*/ModIDs=$new_mod_ids/" "$INSTANCES_DIR/$instance/instance_config.ini"
-    log_message "${GREEN}Mods changed to $new_mod_ids. Restart the server for changes to take effect.${RESET}"
+    log_message "${OK}Mods changed to $new_mod_ids. Restart the server for changes to take effect.${RESET}"
 }
 
 # Function to check server status
@@ -761,7 +765,7 @@ check_server_status() {
     local instance=$1
     load_instance_config "$instance" || return 1
     if pgrep -f "ArkAscendedServer.exe.*AltSaveDirectoryName=$SAVE_DIR" > /dev/null; then
-        log_message "${GREEN}Server for instance $instance is running.${RESET}"
+        log_message "${OK}Server for instance $instance is running.${RESET}"
     else
         log_message "${RED}Server for instance $instance is not running.${RESET}"
     fi
@@ -777,7 +781,7 @@ start_all_instances() {
         if [ -d "$instance" ]; then
             # Check if the server is already running
             if is_server_running "$instance_name"; then
-                log_message "${YELLOW}Instance $instance_name is already running. Skipping...${RESET}"
+                log_message "${INFO}Instance $instance_name is already running. Skipping...${RESET}"
                 continue
             fi
 
@@ -787,11 +791,11 @@ start_all_instances() {
                 log_message "${YELLOW}Waiting 30 seconds before starting the next instance...${RESET}"
                 sleep 30
             else
-                log_message "${RED}Server $instance_name could not be started due to conflicts or errors. Skipping wait time.${RESET}"
+                log_message "${ERROR}Server $instance_name could not be started due to conflicts or errors. Skipping wait time.${RESET}"
             fi
         fi
     done
-    log_message "${GREEN}All instances have been processed.${RESET}"
+    log_message "${OK}All instances have been processed.${RESET}"
 }
 
 # Function to stop all instances
@@ -802,13 +806,13 @@ stop_all_instances() {
     	instance="$INSTANCES_DIR/$instance_name"
         if [ -d "$instance" ]; then
             if ! is_server_running "$instance_name"; then
-                log_message "${YELLOW}Instance $instance_name is not running. Skipping...${RESET}"
+                log_message "${WARNING}Instance $instance_name is not running. Skipping...${RESET}"
                 continue
             fi
             stop_server "$instance_name"
         fi
     done
-    log_message "${GREEN}All instances have been stopped.${RESET}"
+    log_message "${OK}All instances have been stopped.${RESET}"
 }
 
 # Function to send RCON command
@@ -817,7 +821,7 @@ send_rcon_command() {
     local command=$2
 
     if ! is_server_running "$instance"; then
-        log_message "${YELLOW}Server for instance $instance is not running. Cannot send RCON command.${RESET}"
+        log_message "${WARNING}Server for instance $instance is not running. Cannot send RCON command.${RESET}"
         return 1
     fi
 
@@ -829,7 +833,7 @@ send_rcon_command() {
 
     # Check if the RCON command was successful
     if [ $? -ne 0 ]; then
-        log_message "${RED}Failed to send RCON command to instance $instance.${RESET}"
+        log_message "${ERROR}Failed to send RCON command to instance $instance.${RESET}"
         return 1
     fi
 
@@ -849,7 +853,7 @@ show_running_instances() {
             load_instance_config "$instance_name" || continue
             # Check if the server is running
             if pgrep -f "ArkAscendedServer.exe.*AltSaveDirectoryName=$SAVE_DIR" > /dev/null; then
-                log_message "${GREEN}$instance_name is running${RESET}"
+                log_message "${OK}$instance_name is running${RESET}"
                 ((running_count++)) || true
             else
                 log_message "${RED}$instance_name is not running${RESET}"
@@ -873,7 +877,7 @@ delete_instance() {
         instance=$selected_instance
     fi
     if [ -d "$INSTANCES_DIR/$instance" ]; then
-        log_message "${RED}Warning: This will permanently delete the instance '$instance' and all its data.${RESET}"
+        log_message "${WARNING}Warning: This will permanently delete the instance '$instance' and all its data.${RESET}"
         log_message "Type CONFIRM to delete the instance '$instance', or cancel to abort"
         read -p "> " response
 
@@ -887,7 +891,7 @@ delete_instance() {
             fi
             # Check if other instances are running
             if pgrep -f "ArkAscendedServer.exe" > /dev/null; then
-                log_message "${YELLOW}Other instances are still running. Not removing the Config symlink to avoid affecting other servers.${RESET}"
+                log_message "${WARNING}Other instances are still running. Not removing the Config symlink to avoid affecting other servers.${RESET}"
             else
                 # Remove the symlink and restore the original configuration directory
                 rm -f "$SERVER_FILES_DIR/ShooterGame/Saved/Config/WindowsServer" || true
@@ -899,14 +903,14 @@ delete_instance() {
             rm -rf "$INSTANCES_DIR/$instance" || true
             rm -rf "$SERVER_FILES_DIR/ShooterGame/Saved/$instance" || true
             rm -rf "$SERVER_FILES_DIR/ShooterGame/Saved/SavedArks/$instance" || true
-            echo -e "${GREEN}Instance '$instance' has been deleted.${RESET}"
+            echo -e "${OK}Instance '$instance' has been deleted.${RESET}"
         elif [[ $response == "cancel" ]]; then
             log_message "${YELLOW}Deletion cancelled.${RESET}"
         else
-            log_message "${YELLOW}Invalid response. Deletion cancelled.${RESET}"
+            log_message "${ERROR}Invalid response. Deletion cancelled.${RESET}"
         fi
     else
-        log_message "${RED}Instance '$instance' does not exist.${RESET}"
+        log_message "${ERROR}Instance '$instance' does not exist.${RESET}"
     fi
 }
 
@@ -923,22 +927,22 @@ change_instance_name() {
         log_message "${YELLOW}Instance renaming cancelled.${RESET}"
         return
     elif [ -z "$new_instance_name" ]; then
-        log_message "${RED}Instance name cannot be empty.${RESET}"
+        log_message "${ERROR}Instance name cannot be empty.${RESET}"
         return 1
     elif [ -d "$INSTANCES_DIR/$new_instance_name" ]; then
-        log_message "${RED}An instance with the name '$new_instance_name' already exists.${RESET}"
+        log_message "${ERROR}An instance with the name '$new_instance_name' already exists.${RESET}"
         return 1
     fi
 
     # Stop the server if running
     if is_server_running "$instance"; then
-        log_message "${CYAN}Stopping running server for instance '$instance' before renaming...${RESET}"
+        log_message "${WARNING}Stopping running server for instance '$instance' before renaming...${RESET}"
         stop_server "$instance"
     fi
 
     # Rename instance directory
     mv "$INSTANCES_DIR/$instance" "$INSTANCES_DIR/$new_instance_name" || {
-        log_message "${RED}Failed to rename instance directory.${RESET}"
+        log_message "${ERROR}Failed to rename instance directory.${RESET}"
         return 1
     }
 
@@ -954,7 +958,7 @@ change_instance_name() {
     # Update SaveDir in the instance configuration
     sed -i "s/^SaveDir=.*/SaveDir=$new_instance_name/" "$INSTANCES_DIR/$new_instance_name/instance_config.ini"
 
-    log_message "${GREEN}Instance renamed from '$instance' to '$new_instance_name'.${RESET}"
+    log_message "${OK}Instance renamed from '$instance' to '$new_instance_name'.${RESET}"
 }
 
 # Function to edit GameUserSettins.ini
@@ -964,11 +968,11 @@ edit_gameusersettings() {
 
     #Check if server is running
     if is_server_running "$instance"; then
-        log_message "${YELLOW}Server for instance $instance is running. Stop it to edit config${RESET}"
+        log_message "${WARNING}Server for instance $instance is running. Stop it to edit config${RESET}"
         return 0
     fi
     if [ ! -f "$file_path" ]; then
-        log_message "${RED}Error: No GameUserSettings.ini found. Start the server once to generate one or place your own in the instances/$instance/Config folder.${RESET}"
+        log_message "${ERROR}Error: No GameUserSettings.ini found. Start the server once to generate one or place your own in the instances/$instance/Config folder.${RESET}"
         return
     fi
 	log_message "${GREEN}Open GameUserSettins.ini for '$instance'${RESET}"
@@ -982,11 +986,11 @@ edit_game_ini() {
 
     #Check if server is running
     if is_server_running "$instance"; then
-        log_message "${YELLOW}Server for instance $instance is running. Stop it to edit config${RESET}"
+        log_message "${WARNING}Server for instance $instance is running. Stop it to edit config${RESET}"
         return 0
     fi
     if [ ! -f "$file_path" ]; then
-        log_message "${YELLOW}Game.ini not found for instance '$instance'. Creating a new one.${RESET}"
+        log_message "${WARNING}Game.ini not found for instance '$instance'. Creating a new one.${RESET}"
         touch "$file_path"
     fi
 	log_message "${GREEN}Open Game.ini for '$instance'${RESET}"
@@ -1016,7 +1020,7 @@ backup_instance_world() {
 	
     # Check if the server is running
     if is_server_running "$instance"; then
-        log_message "${RED}The server for instance '$instance' is running. Stop it before creating a backup.${RESET}"
+        log_message "${ERROR}The server for instance '$instance' is running. Stop it before creating a backup.${RESET}"
         return 0
     fi
 
@@ -1035,7 +1039,7 @@ backup_instance_world() {
         local diff=$(( (now - last_time) / 3600 ))
 
         if (( diff < max_age_hours )); then
-            log_message "${YELLOW}⏱ Skipping backup: Last backup for '$instance' was only $diff hours ago (threshold: $max_age_hours h).${RESET}"
+            log_message "${INFO}⏱ Skipping backup: Last backup for '$instance' was only $diff hours ago (threshold: $max_age_hours h).${RESET}"
             return 0
         fi
     fi
@@ -1043,7 +1047,7 @@ backup_instance_world() {
     # -- List all world folders in $SERVER_FILES_DIR/ShooterGame/Saved/$instance --
     local instance_dir="$SERVER_FILES_DIR/ShooterGame/Saved/$instance"
     if [ ! -d "$instance_dir" ]; then
-        log_message "${RED}Instance directory '$instance_dir' not found.${RESET}"
+        log_message "${ERROR}Instance directory '$instance_dir' not found.${RESET}"
         return 1
     fi
 
@@ -1054,13 +1058,13 @@ backup_instance_world() {
     done
 
     if [ ${#worlds[@]} -eq 0 ]; then
-        log_message "${RED}No world folders found for '$instance'.${RESET}"
+        log_message "${ERROR}No world folders found for '$instance'.${RESET}"
         return 1
     elif [ ${#worlds[@]} -eq 1 ]; then
         local world_folder="${worlds[0]}"
-        log_message "${CYAN}Auto-detected world folder: $world_folder${RESET}"
+        log_message "${INFO}Auto-detected world folder: $world_folder${RESET}"
     else
-        log_message "${RED}Multiple world folders found for '$instance'. Please choose manually:${RESET}"
+        log_message "${WARNING}Multiple world folders found for '$instance'. Please choose manually:${RESET}"
         for i in "${!worlds[@]}"; do
             log_message "  [$((i+1))] ${worlds[$i]}"
         done
@@ -1074,24 +1078,24 @@ backup_instance_world() {
 
 	tar -czf "$archive_path" -C "$instance_dir" "$world_folder"
 	if [ $? -eq 0 ]; then
-		log_message "${GREEN}✅ Backup successfully created: $archive_path${RESET}"
+		log_message "${OK}✅ Backup successfully created: $archive_path${RESET}"
 	else
-		log_message "${RED}❌ Error creating the backup.${RESET}"
+		log_message "${ERROR}❌ Error creating the backup.${RESET}"
 		return 1
 	fi
 	
 	# Verify archive integrity
 	if tar -tzf "$archive_path" > /dev/null 2>&1; then
-		log_message "${GREEN}✅ Archive integrity verified.${RESET}"
+		log_message "${OK}✅ Archive integrity verified.${RESET}"
 	else
-		log_message "${RED}❌ Backup archive is corrupted. Deleting: $archive_path${RESET}"
+		log_message "${ERROR}❌ Backup archive is corrupted. Deleting: $archive_path${RESET}"
 		rm -f "$archive_path"
 		return 1
 	fi
 	
 	# 🧮 Erzeuge SHA256-Checksumme
 	sha256sum "$archive_path" > "${archive_path}.sha256"
-	log_message "${GREEN}🔐 SHA256 checksum saved to ${archive_path}.sha256${RESET}"	
+	log_message "${OK}🔐 SHA256 checksum saved to ${archive_path}.sha256${RESET}"	
 }
 
 #Load an existing backup (from the backups folder) into a target instance
@@ -1100,14 +1104,14 @@ restore_backup_to_instance() {
 
     # Check if the server is running
     if is_server_running "$target_instance"; then
-        log_message "${RED}The server for instance '$target_instance' is running. Stop it before restoring a backup.${RESET}"
+        log_message "${ERROR}The server for instance '$target_instance' is running. Stop it before restoring a backup.${RESET}"
         return 1
     fi
 
     local backups_dir="$BASE_DIR/backups"
     set +e
     if [ ! -d "$backups_dir" ]; then
-        log_message "${RED}Backup directory '$backups_dir' does not exist.${RESET}"
+        log_message "${ERROR}Backup directory '$backups_dir' does not exist.${RESET}"
         return 1
     fi
     set -e
@@ -1119,7 +1123,7 @@ restore_backup_to_instance() {
     done < <(find "$backups_dir" -maxdepth 1 -type f -name "*.tar.gz" -print0 | sort -z)
 
     if [ ${#backup_files[@]} -eq 0 ]; then
-        log_message "${RED}No backups found in '$backups_dir'.${RESET}"
+        log_message "${ERROR}No backups found in '$backups_dir'.${RESET}"
         return 1
     fi
 
@@ -1130,45 +1134,45 @@ restore_backup_to_instance() {
             local backup_file="$chosen_backup"
             log_message "${CYAN}Selected backup: $backup_file${RESET}"
         elif [ "$REPLY" -eq $((${#backup_files[@]} + 1)) ]; then
-            log_message "${YELLOW}Operation canceled.${RESET}"
+            log_message "${WARNING}Operation canceled.${RESET}"
             return 0
         else
-            log_message "${RED}Invalid selection.${RESET}"
+            log_message "${ERROR}Invalid selection.${RESET}"
             continue
         fi
 
         # WARNING about overwriting
-        log_message "${RED}⚠️ WARNING: Restoring this backup may overwrite existing worlds.${RESET}"
+        log_message "${WARNING}⚠️ WARNING: Restoring this backup may overwrite existing worlds.${RESET}"
         log_message "Type '${YELLOW}CONFIRM${RESET}' to proceed, or '${YELLOW}cancel${RESET}' to abort:"
         read -r user_input
         if [ "$user_input" != "CONFIRM" ]; then
-            echo -e "${YELLOW}Operation canceled.${RESET}"
+            echo -e "${WARNING}Operation canceled.${RESET}"
             return 0
         fi
 
 		# ✅ Checksum prüfen
 		if [ -f "${backup_file}.sha256" ]; then
-			log_message "${CYAN}Verifying SHA256 checksum for backup...${RESET}"
+			log_message "${INFO}Verifying SHA256 checksum for backup...${RESET}"
 			if sha256sum -c "${backup_file}.sha256"; then
-				log_message "${GREEN}✅ Checksum verified. Backup is valid.${RESET}"
+				log_message "${OK}✅ Checksum verified. Backup is valid.${RESET}"
 			else
-				log_message "${RED}❌ Checksum verification failed! Backup may be corrupted.${RESET}"
-				log_message "${YELLOW}Restore aborted to avoid data loss.${RESET}"
+				log_message "${ERROR}❌ Checksum verification failed! Backup may be corrupted.${RESET}"
+				log_message "${ERROR}Restore aborted to avoid data loss.${RESET}"
 				return 1
 			fi
 		else
-			log_message "${YELLOW}⚠ No checksum file found for this backup. Skipping integrity check.${RESET}"
+			log_message "${INFO}⚠ No checksum file found for this backup. Skipping integrity check.${RESET}"
 		fi
 
         # Extract the backup into $SERVER_FILES_DIR/ShooterGame/Saved/$target_instance/
         mkdir -p "$SERVER_FILES_DIR/ShooterGame/Saved/$target_instance"
-        log_message "${CYAN}Extracting backup...${RESET}"
+        log_message "${INFO}Extracting backup...${RESET}"
         tar -xzf "$backup_file" -C "$SERVER_FILES_DIR/ShooterGame/Saved/$target_instance/"
 
         if [ $? -eq 0 ]; then
-            log_message "${GREEN}✅ Backup successfully loaded into instance '$target_instance'.${RESET}"
+            log_message "${OK}✅ Backup successfully loaded into instance '$target_instance'.${RESET}"
         else
-            log_message "${RED}❌ Error extracting the backup.${RESET}"
+            log_message "${ERROR}❌ Error extracting the backup.${RESET}"
         fi
 
         break
@@ -1182,19 +1186,19 @@ backup_instance_world_cli() {
 
     # Check if the server is running
     if is_server_running "$instance"; then
-        log_message "${RED}The server for instance '$instance' is running. Please stop it first.${RESET}"
+        log_message "${ERROR}The server for instance '$instance' is running. Please stop it first.${RESET}"
         return 1
     fi
 
     local instance_dir="$SERVER_FILES_DIR/ShooterGame/Saved/$instance"
     if [ ! -d "$instance_dir" ]; then
-        log_message "${RED}Instance directory '$instance_dir' not found.${RESET}"
+        log_message "${ERROR}Instance directory '$instance_dir' not found.${RESET}"
         return 1
     fi
 
     local src_path="$instance_dir/$world_folder"
     if [ ! -d "$src_path" ]; then
-        log_message "${RED}World folder '$world_folder' does not exist (${src_path}).${RESET}"
+        log_message "${ERROR}World folder '$world_folder' does not exist (${src_path}).${RESET}"
         return 1
     fi
 
@@ -1208,9 +1212,9 @@ backup_instance_world_cli() {
     log_message "${CYAN}Creating backup for '$world_folder' in instance '$instance'...${RESET}"
     tar -czf "$archive_path" -C "$instance_dir" "$world_folder"
     if [ $? -eq 0 ]; then
-        log_message "${GREEN}Backup successfully created: $archive_path${RESET}"
+        log_message "${OK}Backup successfully created: $archive_path${RESET}"
     else
-        log_message "${RED}Error creating the backup.${RESET}"
+        log_message "${ERROR}Error creating the backup.${RESET}"
         return 1
     fi
 }
@@ -1257,7 +1261,7 @@ cleanup_backups() {
             monthly_map["$month_id"]="$f"
         else
             # Älter als 1 Jahr → löschen
-            log_message "${RED}🧹 Deleting old backup: $f${RESET}"
+            log_message "${INFO}🧹 Deleting old backup: $f${RESET}"
             rm -f "$f" "${f}.sha256" 2>/dev/null
         fi
     done
@@ -1265,12 +1269,12 @@ cleanup_backups() {
     # --- Duplikate entfernen (außer die "letzten")
     for f in "${backups[@]}"; do
         if [[ ! " ${daily_map[*]} ${weekly_map[*]} ${monthly_map[*]} " =~ $f ]]; then
-            log_message "${YELLOW}🧹 Removing redundant backup: $f${RESET}"
+            log_message "${INFO}🧹 Removing redundant backup: $f${RESET}"
             rm -f "$f" "${f}.sha256" 2>/dev/null
         fi
     done
 
-    log_message "${GREEN}✔ Backup cleanup complete.${RESET}"
+    log_message "${OK}✔ Backup cleanup complete.${RESET}"
 }
 
 #Save world
@@ -1279,7 +1283,7 @@ save_instance() {
     local delay=20
 
     if ! is_server_running "$instance"; then
-        log_message "${YELLOW}Instance '$instance' is not running. Skipping saveworld.${RESET}"
+        log_message "${WARNING}Instance '$instance' is not running. Skipping saveworld.${RESET}"
         return 0
     fi
 
@@ -1288,13 +1292,13 @@ save_instance() {
     response=$(send_rcon_command "$instance" "saveworld")
 	
     if [[ -z "$response" ]]; then
-        log_message "${YELLOW}⚠ No RCON response received from '$instance'.${RESET}"
+        log_message "${INFO}⚠ No RCON response received from '$instance'.${RESET}"
     elif [[ "$response" == "World Saved" ]]; then
-		 log_message "${GREEN}✅ Save confirmed for '$instance'. RCON response: $response${RESET}"
+		 log_message "${OK}✅ Save confirmed for '$instance'. RCON response: $response${RESET}"
 	elif echo "$response" | grep -qi "World Saved"; then	
-		 log_message "${GREEN}✅ Save confirmed for '$instance'. RCON response: $response${RESET}"
+		 log_message "${OK}✅ Save confirmed for '$instance'. RCON response: $response${RESET}"
 	else
-        log_message "${RED}❌ Unexpected RCON response from '$instance': $response${RESET}"
+        log_message "${ERROR}❌ Unexpected RCON response from '$instance': $response${RESET}"
     fi
     
 	log_message "${CYAN}Waiting ${delay}s to allow save to complete...${RESET}"
@@ -1315,7 +1319,7 @@ local file_path="$1"
     elif command -v vim >/dev/null 2>&1; then
         vim "$file_path"
     else
-        log_message "${RED}No suitable text editor found. Please edit $file_path manually.${RESET}"
+        log_message "${ERROR}No suitable text editor found. Please edit $file_path manually.${RESET}"
     fi
 }
 
@@ -1348,7 +1352,7 @@ edit_configuration_menu() {
                 return
                 ;;
             *)
-                log_message "${RED}Invalid option selected.${RESET}"
+                log_message "${ERROR}Invalid option selected.${RESET}"
                 ;;
         esac
     done
@@ -1363,14 +1367,14 @@ function checkForUpdate(){
     tput rc; tput ed;
     log_message "Current version: $RED $instver $RESET"
     log_message "Available version: $GREEN $bnumber $RESET"
-    log_message "Your server needs to be restarted in order to receive the latest update."
+    log_message "$ERROR Your server needs to be restarted in order to receive the latest update. $RESET"
 #    echo -e "Run \"arkmanager update\" to do so"
     return 1
   else
     tput rc; tput ed;
     log_message "Current version: $GREEN $instver $RESET"
     log_message "Available version: $GREEN $bnumber $RESET"
-    log_message "Your server is up to date!"
+    log_message "$OK Your server is up to date! $RESET"
     return 0
   fi
 }
@@ -1517,7 +1521,7 @@ log_message() {
 configure_companion_script() {
     local companion_script="$BASE_DIR/ark_restart_manager.sh"
     if [ ! -f "$companion_script" ]; then
-        log_message "${RED}Error: Companion script not found at '$companion_script'.${RESET}"
+        log_message "${ERROR}Error: Companion script not found at '$companion_script'.${RESET}"
         return 1
     fi
 
@@ -1526,7 +1530,7 @@ configure_companion_script() {
     # 1) Dynamically get all available instances
     get_available_instances
     if [ ${#available_instances[@]} -eq 0 ]; then
-        log_message "${RED}No instances found in '$INSTANCES_DIR'. Returning to main menu.${RESET}"
+        log_message "${ERROR}No instances found in '$INSTANCES_DIR'. Returning to main menu.${RESET}"
         return 0
     fi
 
@@ -1557,7 +1561,7 @@ configure_companion_script() {
     fi
 
     if [ ${#selected_instances[@]} -eq 0 ]; then
-        log_message "${RED}No valid instances selected.${RESET}"
+        log_message "${ERROR}No valid instances selected.${RESET}"
         return 1
     fi
 
@@ -1622,7 +1626,7 @@ $messages_str)
         skip==0 { print }
     ' "$companion_script.bak" > "$companion_script"
 
-    log_message "${GREEN}Restart Manager script has been updated successfully.${RESET}"
+    log_message "${OK}Restart Manager script has been updated successfully.${RESET}"
 
     # 5) Ask for cron job
     log_message "${CYAN}Would you like to schedule a daily cron job for server restart? [y/N]${RESET}"
@@ -1642,7 +1646,7 @@ $messages_str)
         log_message "$cron_min $cron_hour * * * $companion_script"
         ) | crontab -
 
-        log_message "${GREEN}Cron job scheduled daily at $cron_time.${RESET}"
+        log_message "${OK}Cron job scheduled daily at $cron_time.${RESET}"
     fi
 }
 
@@ -1737,7 +1741,7 @@ main_menu() {
                     exit 0
                     ;;
                 *)
-                    echo -e "${RED}Invalid option selected.${RESET}"
+                    echo -e "${ERROR}Invalid option selected.${RESET}"
                     ;;
             esac
         done
@@ -1810,7 +1814,7 @@ manage_instance() {
                     return
                     ;;
                 *)
-                    echo -e "${RED}Invalid option selected.${RESET}"
+                    echo -e "${ERROR}Invalid option selected.${RESET}"
                     ;;
             esac
         done
@@ -1856,7 +1860,7 @@ else
             ;;
         delete)
             if [ -z "$2" ]; then
-                log_message "${RED}Usage: $0 delete <instance_name>${RESET}"
+                log_message "${ERROR}Usage: $0 delete <instance_name>${RESET}"
                 exit 1
             fi
             delete_instance "$2"
@@ -1877,7 +1881,7 @@ else
                     ;;
                 send_rcon)
                     if [ $# -lt 3 ]; then
-                        log_message "${RED}Usage: $0 <instance_name> send_rcon \"<rcon_command>\"${RESET}"
+                        log_message "${ERROR}Usage: $0 <instance_name> send_rcon \"<rcon_command>\"${RESET}"
                         exit 1
                     fi
                     rcon_command="${@:3}"  # Get all arguments from the third onwards
@@ -1885,15 +1889,15 @@ else
                     ;;
                 backup)
                     if [ $# -lt 3 ]; then
-                        log_message "${RED}Usage: $0 $instance_name backup <world_folder>${RESET}"
+                        log_message "${ERROR}Usage: $0 $instance_name backup <world_folder>${RESET}"
                         exit 1
                     fi
                     world_folder=$3
                     backup_instance_world_cli "$instance_name" "$world_folder"
                     ;;
                 *)
-                    echo -e "${RED}Usage: $0 [update|restart_all|restart_all_now|start_all|stop_all|show_running|delete <instance_name>]${RESET}"
-                    echo -e "${RED}       $0 <instance_name> [start|stop|restart|send_rcon \"<rcon_command>\" |backup <world_folder>]${RESET}"
+                    echo -e "${ERROR}Usage: $0 [update|restart_all|restart_all_now|start_all|stop_all|show_running|delete <instance_name>]${RESET}"
+                    echo -e "${ERROR}       $0 <instance_name> [start|stop|restart|send_rcon \"<rcon_command>\" |backup <world_folder>]${RESET}"
                     echo "Or run without arguments to enter interactive mode."
                     exit 1
                     ;;
