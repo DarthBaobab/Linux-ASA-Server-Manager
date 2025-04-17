@@ -392,19 +392,18 @@ initialize_proton_prefix() {
 
 # Function to populate an array with available instances from INSTANCES_DIR
 get_available_instances() {
-    # Clear the array to avoid stale entries
+    local include_disabled="$1"
+	# Clear the array to avoid stale entries
     available_instances=()
 
-    #if [ -d "$INSTANCES_DIR" ]; then
-        # Read all directories (one per line) into the array
-        #mapfile -t available_instances < <(ls -1 "$INSTANCES_DIR" 2>/dev/null | grep -v '_off$')
-	
-    #fi
 for entry in "$INSTANCES_DIR"/*; do
     name="$(basename "$entry")"
-    if [[ -d "$entry" && ! "$name" =~ _off$ ]]; then
-        available_instances+=("$name")
-    fi
+    #if [[ -d "$entry" && ! "$name" =~ _off$ ]]; then
+	if [[ -d "$entry" ]]; then
+		if [[ "$include_disabled" == "all" ]] || [[ ! "$name" =~ _off$ ]]; then
+			available_instances+=("$name")
+		fi    
+	fi
 done
 }
 
@@ -1750,12 +1749,35 @@ main_menu() {
 
 # Instance management menu using 'select'
 manage_instance() {
-    local instance=$1
+    local start_instance="$1"
+
+    get_available_instances all
+
+    if [ ${#available_instances[@]} -eq 0 ]; then
+        log_message "${ERROR}❌ No instances found.${RESET}"
+        return
+    fi
+
+    # Index ermitteln, bei dem wir starten sollen
+    local index=0
+    for i in "${!available_instances[@]}"; do
+        if [[ "${available_instances[$i]}" == "$start_instance" ]]; then
+            index=$i
+            break
+        fi
+    done
+
     while true; do
+		if (( index < 0 )); then index=0; fi
+        if (( index >= ${#available_instances[@]} )); then index=$(( ${#available_instances[@]} - 1 )); fi
+
+        local instance="${available_instances[$index]}"
+
         echo -e "${YELLOW}--------------------------------${RESET}"
-        echo -e "${YELLOW}Managing Instance: $instance${RESET}"
+        echo -e "${YELLOW}Managing Instance: $instance${RESET} ($((index + 1))/${#available_instances[@]})"
         echo -e "${YELLOW}--------------------------------${RESET}"
 
+        local PS3="Please choose an option: "
         options=(
             "Start Server"
             "Stop Server"
@@ -1766,52 +1788,69 @@ manage_instance() {
             "Change Mods"
             "Check Server Status"
             "Change Instance Name"
-            "Back to Main Menu"
+            "⏪ Previous instance"
+            "⏩ Next instance"
+            "🔙 Back to Main Menu"
         )
 
-        PS3="Please choose an option: "
         select opt in "${options[@]}"; do
             case "$REPLY" in
                 1)
                     start_server "$instance"
-                    break
+					break
                     ;;
                 2)
                     stop_server "$instance"
-                    break
+					break
                     ;;
                 3)
                     stop_server "$instance"
                     start_server "$instance"
-                    break
+					break
                     ;;
                 4)
                     start_rcon_cli "$instance"
-                    break
+					break
                     ;;
                 5)
                     edit_configuration_menu "$instance"
-                    break
+					break
                     ;;
                 6)
                     change_map "$instance"
-                    break
+					break
                     ;;
                 7)
                     change_mods "$instance"
-                    break
+					break
                     ;;
                 8)
                     check_server_status "$instance"
-                    break
+					break
                     ;;
                 9)
                     change_instance_name "$instance"
                     instance=$new_instance_name  # Update the instance variable
-                    break
+					break
                     ;;
-                10 | [Qq])
-                    return
+                10 | [Pp])  # Vorherige
+                    if (( index == 0 )); then
+                        echo -e "${WARNING}Already at first instance.${RESET}"
+                    else
+                        ((index = index - 1))
+                        break
+                    fi
+					;;
+				11 | [Nn])  # Nächste
+                    if (( index == ${#available_instances[@]} - 1 )); then
+                        echo -e "${WARNING}Already at last instance.${RESET}"
+                    else
+                        ((index = index + 1))
+                        break
+                    fi
+					;;
+				12 | [Qq])
+					return
                     ;;
                 *)
                     echo -e "${ERROR}Invalid option selected.${RESET}"
