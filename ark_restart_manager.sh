@@ -181,7 +181,7 @@ manage_instances "stop" ""
 log_message "Wait 30 sec befor starting the update prozess"
 sleep 30
 log_message "Updating all instances..."
-$ark_manager update_force
+$ark_manager update
 log_message "Update completed."
 log_message "Wait 30 sec befor starting the servers"
 sleep 30

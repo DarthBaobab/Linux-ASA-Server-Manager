@@ -1052,9 +1052,9 @@ backup_instance_world() {
 
     # Detect world folders
     local worlds=()
-    for d in "$instance_dir"/*WP; do
-        [ -d "$d" ] && worlds+=("$(basename "$d")")
-    done
+	for d in "$instance_dir"/*; do
+		[ -d "$d" ] && worlds+=("$(basename "$d")")
+	done
 
     if [ ${#worlds[@]} -eq 0 ]; then
         log_message "${ERROR}No world folders found for '$instance'.${RESET}"
@@ -1872,7 +1872,7 @@ else
               start_all_instances
             fi
             ;;
-        update_force)
+        update)
               install_base_server
             ;;
         update_check)
