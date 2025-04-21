@@ -5,54 +5,54 @@
 
   "commands": {
     "update": {
-      "shell": "asa-manager update",
+      "shell": "/home/ark/.local/bin/asa-manager update",
       "description": "🔄 Installiert und Validiert die Spieldateien. **ACHTUNG!** Dafür müssen die Server gestoppt sein!",
       "role": ""
     },
     "update_30": {
-      "shell": "asa-manager restart_all",
+      "shell": "/home/ark/.local/bin/asa-manager restart_all",
       "description": "♻️ Restart + Updates mit 30 Minuten vorankündigung.",
       "role": ""
     },
     "update_now": {
-      "shell": "asa-manager update_now",
+      "shell": "/home/ark/.local/bin/asa-manager update_now",
       "description": "🔄 Checkt ob updates verfügbar sind. Wenn ja, dann werden alle Server gestoppt, update installiert und danach wieder alle Server gestartet",
       "role": ""
     },
     "update_check": {
-      "shell": "asa-manager update_check",
+      "shell": "/home/ark/.local/bin/asa-manager update_check",
       "description": "🔍 Zeigt, ob Updates verfügbar sind.",
       "role": ""
     },
     "running": {
-      "shell": "asa-manager show_running",
+      "shell": "/home/ark/.local/bin/asa-manager show_running",
       "description": "🟢 Zeigt alle verfügbaren Instanzen an.",
       "role": ""
     }
   },
   "commands_all": {
     "start": {
-      "shell": "asa-manager start_all",
+      "shell": "/home/ark/.local/bin/asa-manager start_all",
       "description": "▶️ Startet alle Server",
       "role": ""
     },
     "stop": {
-      "shell": "asa-manager stop_all",
+      "shell": "/home/ark/.local/bin/asa-manager stop_all",
       "description": "⏹️ Stoppt alle Server",
       "role": ""
     },
     "restart": {
-      "shell": "asa-manager restart_all_now",
+      "shell": "/home/ark/.local/bin/asa-manager restart_all_now",
       "description": "⚠️ Erzwingt einen sofortigen Neustart aller Instanzen.",
       "role": ""
     },
     "wdk": {
-      "shell": "asa-manager send_rcon destroywilddinos",
+      "shell": "/home/ark/.local/bin/asa-manager send_rcon destroywilddinos",
       "description": "💥 Entfernt **alle wilden Dinos** von allen Karte. Die Spawns beginnen danach neu.",
       "role": ""
     },
     "players": {
-      "shell": "asa-manager send_rcon listplayers",
+      "shell": "/home/ark/.local/bin/asa-manager send_rcon listplayers",
       "description": "🧑‍🤝‍🧑 Zeigt eine Liste aller aktuell verbundenen Spieler für alle Server an.",
       "role": ""
     }

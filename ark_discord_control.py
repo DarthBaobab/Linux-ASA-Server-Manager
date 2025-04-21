@@ -71,7 +71,7 @@ def split_message_into_blocks(text, max_length=1900):
     return blocks
 
 async def get_available_instances():
-    code, out, err = await run_command("asa-manager list_instances")
+    code, out, err = await run_command("/home/ark/.local/bin/asa-manager list_instances")
     if code == 0:
         clean = strip_ansi_codes(out)
         lines = clean.strip().splitlines()
@@ -177,7 +177,7 @@ async def on_message(message):
             await message.channel.send(f"❌ Du benötigst die Rolle `{required_role}` oder `{ADMIN_ROLE}` für diesen Befehl.")
             return
 
-        shell_command = f"asa-manager {safe_instance} {shell_part}"
+        shell_command = f"/home/ark/.local/bin/asa-manager {safe_instance} {shell_part}"
         
     else:
         await message.channel.send("❌ Befehl unbekannt oder unvollständig.\nℹ️ Gib `bf!info` ein für eine Übersicht aller gültigen Befehle.")
