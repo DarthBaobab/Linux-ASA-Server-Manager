@@ -841,6 +841,23 @@ send_rcon_command() {
     return 0
 }
 
+# Function to send RCON command to all
+send_rcon_command_to_all() {
+    local command=$1
+    get_available_instances
+    for instance_name in "${available_instances[@]}"; do
+    	instance="$INSTANCES_DIR/$instance_name"
+        if [ -d "$instance" ]; then
+            if ! is_server_running "$instance_name"; then
+                log_message "${WARNING}Instance $instance_name is not running. Skipping...${RESET}"
+                continue
+            fi
+			send_rcon_command "$instance_name $command"
+        fi
+    done
+    #log_message "${OK}All instances have been stopped.${RESET}"
+}
+
 # Function to show running instances
 show_running_instances() {
     log_message "${CYAN}Checking running instances...${RESET}"
@@ -852,17 +869,17 @@ show_running_instances() {
             load_instance_config "$instance_name" || continue
             # Check if the server is running
             if pgrep -f "ArkAscendedServer.exe.*AltSaveDirectoryName=$SAVE_DIR" > /dev/null; then
-                log_message "${OK}$instance_name is running${RESET}"
+                log_message "${OK}$instance_name${RESET}"
                 ((running_count++)) || true
             else
-                log_message "${RED}$instance_name is not running${RESET}"
+                log_message "${ERROR}$instance_name${RESET}"
             fi
         fi
     done
     if [ $running_count -eq 0 ]; then
-        log_message "${RED}No instances are currently running.${RESET}"
+        log_message "${CYAN}No instances are currently running.${RESET}"
     else
-        log_message "${GREEN}Total running instances: $running_count${RESET}"
+        log_message "${CYAN}Total running instances: $running_count${RESET}"
     fi
 }
 
@@ -1897,6 +1914,17 @@ else
         show_running)
             show_running_instances
             ;;
+        list_instances)
+            list_instances
+            ;;
+		send_rcon)
+			if [ $# -lt 2 ]; then
+				log_message "${ERROR}Usage: $0 send_rcon \"<rcon_command>\"${RESET}"
+				exit 1
+			fi
+			rcon_command="${@:2}"  # Get all arguments from the second onwards
+			send_rcon_command_to_all "$rcon_command"
+			;;
         delete)
             if [ -z "$2" ]; then
                 log_message "${ERROR}Usage: $0 delete <instance_name>${RESET}"
