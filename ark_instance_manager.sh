@@ -400,7 +400,7 @@ for entry in "$INSTANCES_DIR"/*; do
     name="$(basename "$entry")"
     #if [[ -d "$entry" && ! "$name" =~ _off$ ]]; then
 	if [[ -d "$entry" ]]; then
-		if [[ "$include_disabled" == "all" ]] || [[ ! "$name" =~ _off$ ]]; then
+		if [[ "$include_disabled" == "all" ]] || [[ ! "$name" =~ _off$ && ! "$name" =~ Testserver ]]; then
 			available_instances+=("$name")
 		fi    
 	fi
@@ -1916,6 +1916,9 @@ else
             ;;
         list_instances)
             list_instances
+            ;;
+        cleanup_backups)
+            cleanup_backups
             ;;
 		send_rcon)
 			if [ $# -lt 2 ]; then

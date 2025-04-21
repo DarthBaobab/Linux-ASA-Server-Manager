@@ -189,4 +189,7 @@ sleep 30
 # 4. Start the server instances one by one (with wait time between starts)
 manage_instances "start" "$start_wait_time"
 
+# 5. remove old Backups
+$ark_manager cleanup_backups
+
 log_message "ARK servers have been successfully restarted and updated."
