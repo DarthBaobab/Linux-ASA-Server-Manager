@@ -827,7 +827,8 @@ send_rcon_command() {
     load_instance_config "$instance" || return 1
 
     # Always use the silent mode of the RCON client
-    local response
+	log_message "Sending $command to $instance"
+	local response
     response=$("$RCON_SCRIPT" "localhost:$RCON_PORT" -p "$ADMIN_PASSWORD" -c "$command" --silent 2>&1)
 
     # Check if the RCON command was successful
