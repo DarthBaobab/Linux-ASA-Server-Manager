@@ -400,7 +400,7 @@ for entry in "$INSTANCES_DIR"/*; do
     name="$(basename "$entry")"
     #if [[ -d "$entry" && ! "$name" =~ _off$ ]]; then
 	if [[ -d "$entry" ]]; then
-		if [[ "$include_disabled" == "all" ]] || [[ ! "$name" =~ _off$ && ! "$name" =~ Testserver ]]; then
+		if [[ "$include_disabled" == "all" ]] || { [[ ! "$name" =~ _off$ ]] && [[ ! "$name" =~ Testserver ]]; }; then
 			available_instances+=("$name")
 		fi    
 	fi
@@ -852,7 +852,7 @@ send_rcon_command_to_all() {
                 log_message "${WARNING}Instance $instance_name is not running. Skipping...${RESET}"
                 continue
             fi
-			send_rcon_command "$instance_name $command"
+			send_rcon_command "$instance_name" "$command"
         fi
     done
     #log_message "${OK}All instances have been stopped.${RESET}"
