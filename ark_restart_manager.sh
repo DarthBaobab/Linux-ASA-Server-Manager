@@ -79,40 +79,34 @@ log_message() {
 }
 
 # Function to get list of instances
-resolve_instances() {
+get_available_instances() {
 	if [[ "${instances[0]}" == "all" ]]; then
-		log_message "Fetching available instances using ark_instance_manager.sh get_available_instances..."
+		local instances_dir="$script_dir/instances"
+		local include_disabled="$1"
+		# Clear the array to avoid stale entries
+		local available_instances=()
 
-		mapfile -t resolved_instances < <(get_available_instances)
-
-		if [ ${#resolved_instances[@]} -eq 0 ]; then
-			log_message "❌ No available instances found via get_available_instances."
-			exit 1
+		if [[ ! -d "$instances_dir" ]]; then
+			log_message "❌ Instances directory '$instances_dir' does not exist."
+			return 1
 		fi
 
-		instances=("${resolved_instances[@]}")
+		for entry in "$instances_dir"/*; do
+			name="$(basename "$entry")"
+			#if [[ -d "$entry" && ! "$name" =~ _off$ ]]; then
+			if [[ -d "$entry" ]]; then
+				if [[ "$include_disabled" == "all" ]] || { [[ ! "$name" =~ _off$ ]] && [[ ! "$name" =~ Testserver ]]; }; then
+					 available_instances+=("$name")
+				fi    
+			fi
+		done
+
+		# Ausgabe als Liste – Zeile pro Instanz
+		printf "%s\n" "${available_instances[@]}"
+		
+		instances=("${available_instances[@]}")
+
 	fi
-}
-
-get_available_instances() {
-    local instances_dir="$script_dir/instances"
-    local found_instances=()
-
-    if [[ ! -d "$instances_dir" ]]; then
-        log_message "❌ Instances directory '$instances_dir' does not exist."
-        return 1
-    fi
-
-    for entry in "$instances_dir"/*; do
-        local name
-        name="$(basename "$entry")"
-        if [[ -d "$entry" ]] && [[ ! "$name" =~ _off$ ]] && [[ ! "$name" =~ Testserver ]]; then
-            found_instances+=("$name")
-        fi
-    done
-
-    # Ausgabe als Liste – Zeile pro Instanz
-    printf "%s\n" "${found_instances[@]}"
 }
 
 # Function to execute a command for each instance (with optional wait time)
@@ -168,7 +162,7 @@ announce_restart() {
 # ---------- MAIN SCRIPT ----------
 log_message "Starting ARK server restart process."
 
-resolve_instances
+get_available_instances "all"
 
 # 1. Announce the restart with warning messages
 announce_restart
@@ -185,6 +179,8 @@ $ark_manager update
 log_message "Update completed."
 log_message "Wait 30 sec befor starting the servers"
 sleep 30
+
+get_available_instances
 
 # 4. Start the server instances one by one (with wait time between starts)
 manage_instances "start" "$start_wait_time"
