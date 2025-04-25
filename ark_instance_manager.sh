@@ -396,14 +396,14 @@ get_available_instances() {
 	# Clear the array to avoid stale entries
     available_instances=()
 
-for entry in "$INSTANCES_DIR"/*; do
-    name="$(basename "$entry")"
-    #if [[ -d "$entry" && ! "$name" =~ _off$ ]]; then
-	if [[ -d "$entry" ]]; then
-		if [[ "$include_disabled" == "all" ]] || { [[ ! "$name" =~ _off$ ]] && [[ ! "$name" =~ Testserver ]]; }; then
-			available_instances+=("$name")
-		fi    
-	fi
+	for entry in "$INSTANCES_DIR"/*; do
+		name="$(basename "$entry")"
+		#if [[ -d "$entry" && ! "$name" =~ _off$ ]]; then
+		if [[ -d "$entry" ]]; then
+			if [[ "$include_disabled" == "all" ]] || { [[ ! "$name" =~ _off$ ]] && [[ ! "$name" =~ Testserver ]]; }; then
+				available_instances+=("$name")
+			fi    
+		fi
 done
 }
 
