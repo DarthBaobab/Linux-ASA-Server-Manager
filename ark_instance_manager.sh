@@ -800,7 +800,7 @@ start_all_instances() {
 # Function to stop all instances
 stop_all_instances() {
     log_message "${CYAN}Stopping all server instances...${RESET}"
-    get_available_instances
+    get_available_instances "all"
     for instance_name in "${available_instances[@]}"; do
     	instance="$INSTANCES_DIR/$instance_name"
         if [ -d "$instance" ]; then
