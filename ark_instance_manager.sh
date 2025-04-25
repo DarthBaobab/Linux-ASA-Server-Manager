@@ -1472,6 +1472,13 @@ function checkUpdateManifests(){
   fi
 }
 
+# Return the installed beta / branch
+function getCurrentBranch(){
+  if [ -f "${SERVER_FILES_DIR}/steamapps/appmanifest_2430930.acf" ]; then
+    while read -r name val; do if [ "${name}" == "{" ]; then parseSteamACF ".UserConfig" "betakey"; break; fi; done <"${SERVER_FILES_DIR}/steamapps/appmanifest_2430930.acf"
+  fi
+}
+
 # Parse an ACF structure
 # $1 is the desired path
 # $2 is the desired property
