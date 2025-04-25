@@ -106,7 +106,7 @@ get_available_instances() {
     for entry in "$instances_dir"/*; do
         local name
         name="$(basename "$entry")"
-        if [[ -d "$entry" && ! "$name" =~ _off$ ]]; then
+        if [[ -d "$entry" ]] && [[ ! "$name" =~ _off$ ]] && [[ ! "$name" =~ Testserver ]]; then
             found_instances+=("$name")
         fi
     done
