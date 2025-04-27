@@ -734,7 +734,7 @@ change_map() {
     load_instance_config "$instance" || return 1
     log_message "${INFO}Current map: $MAP_NAME${RESET}"
     log_message "${INFO}Enter the new map name (or type 'cancel' to abort):${RESET}"
-    read -r new_map_name
+    read -r -e -i "$MAP_NAME" new_map_name
     if [[ "$new_map_name" == "cancel" ]]; then
         log_message "${WARNING}Map change aborted.${RESET}"
         return 0
@@ -937,7 +937,7 @@ change_instance_name() {
     load_instance_config "$instance" || return 1
 
     log_message "${CYAN}Enter the new name for instance '$instance' (or type 'cancel' to abort):${RESET}"
-    read -r new_instance_name
+    read -r -e -i "$instance" new_instance_name
 
     # Validation
     if [ "$new_instance_name" = "cancel" ]; then
@@ -1757,7 +1757,8 @@ main_menu() {
                     break
                     ;;
                 13)
-                    configure_companion_script
+                    #configure_companion_script
+					echo -e "Restart Manager Configuration is not available!"
                     break
                     ;;
                 14 | [Qq])
