@@ -13,23 +13,25 @@ print(configfile)
 with open(configfile, "r") as f:
     config = json.load(f)
 
-TOKEN = config["token"]
-ADMIN_CHANNEL_ID = config["admin_channel_id"]
-ADMIN_ROLE = config["admin_role"]
+ASA_MANAGER_PATH = config["discord"]["generel"]["asa_manager_path"]
+TOKEN = config["discord"]["generel"]["token"]
+ADMIN_CHANNEL_ID = config["discord"]["generel"]["admin_channel_id"]
+ADMIN_ROLE = config["discord"]["generel"]["admin_role"]
+COMMAND_PREFIX = config["discord"]["command_prefix"]
 
 COMMAND_MAP = {
     k: (v["shell"], v["description"], v["role"])
-    for k, v in config.get("commands", {}).items()
+    for k, v in config["discord"].get("commands", {}).items()
 }
 
 COMMAND_MAP_ALL = {
     k: (v["shell"], v["description"], v["role"])
-    for k, v in config.get("commands_all", {}).items()
+    for k, v in config["discord"].get("commands_all", {}).items()
 }
 
 INSTANCE_MAP = {
     k: (v["shell"], v["description"], v["role"])
-    for k, v in config.get("instance_commands", {}).items()
+    for k, v in config["discord"].get("instance_commands", {}).items()
 }
 
 # Discord Intents
@@ -37,7 +39,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 
-bot = commands.Bot(command_prefix="bf!", intents=intents)
+bot = commands.Bot(command_prefix=COMMAND_PREFIX, intents=intents)
 
 async def run_command(cmd):
     proc = await asyncio.create_subprocess_shell(
@@ -104,8 +106,9 @@ async def on_message(message):
         await message.channel.send("❌ Du hast nicht die erforderliche Berechtigung.")
         return
 
-    #content = message.content.strip().lower().replace("bf!", "")
-    content = message.content.strip().replace("bf!", "")
+    content = message.content.strip()
+    if content.startswith(COMMAND_PREFIX):
+        content = content[len(COMMAND_PREFIX):].strip()    
     parts = content.split()
     cmd = parts[0] if len(parts) > 0 else None
     arg = parts[1] if len(parts) > 1 else None
@@ -120,17 +123,17 @@ async def on_message(message):
         # 1. Ohne Instanz
         info_lines.append("🔧 **Befehle ohne Instanz:**")
         for key, (shell_cmd, description, _) in COMMAND_MAP.items():
-            info_lines.append(f"• `bf!{key}` – {description}")
+            info_lines.append(f"• `{COMMAND_PREFIX}{key}` – {description}")
 
         # 2. Mit all
         info_lines.append("\n📦 **Befehle mit `all` als Instanz:**")
         for key, (shell_cmd, description, _) in COMMAND_MAP_ALL.items():
-            info_lines.append(f"• `bf!{key} all` – {description}")
+            info_lines.append(f"• `{COMMAND_PREFIX}{key} all` – {description}")
 
         # 3. Für einzelne Instanzen (nur Beschreibung hier)
         info_lines.append("\n📦 **Befehle mit Instanz:**")
         for key, (shell_cmd, description, _) in INSTANCE_MAP.items():
-            info_lines.append(f"• `bf!{key} <instanz>` – {description}")
+            info_lines.append(f"• `{COMMAND_PREFIX}{key} <instanz>` – {description}")
 
         response = "\n".join(info_lines)
         blocks = split_message_into_blocks(response)
@@ -148,27 +151,31 @@ async def on_message(message):
         await message.channel.send(f"🧾 **Verfügbare Instanzen:**\n{inst_text}")
         return
 
-    # 1. Kommandos ohne Argumente (z. B. bf!update)
+    # 1. Kommandos ohne Argumente
     elif cmd.lower() in COMMAND_MAP and not arg:
-        shell_command, _, required_role = COMMAND_MAP[cmd.lower()]
+        shell_part, _, required_role = COMMAND_MAP[cmd.lower()]
         if not user_has_permission(message.author, required_role):
             await message.channel.send(f"❌ Du benötigst die Rolle `{required_role}` oder `{ADMIN_ROLE}` für diesen Befehl.")
             return
+        
+        shell_command = f"{ASA_MANAGER_PATH} {shell_part}"
             
     # 2. Spezialfall: all → nutze Mapping
     elif arg and arg.lower() == "all" and cmd.lower() in COMMAND_MAP_ALL:
-        shell_command, _, required_role = COMMAND_MAP_ALL[cmd.lower()]
+        shell_part, _, required_role = COMMAND_MAP_ALL[cmd.lower()]
         if not user_has_permission(message.author, required_role):
             await message.channel.send(f"❌ Du benötigst die Rolle `{required_role}` oder `{ADMIN_ROLE}` für diesen Befehl.")
             return
 
-    # 3. Instanzbefehle wie bf!start TheIsland
+        shell_command = f"{ASA_MANAGER_PATH} {shell_part}"
+
+    # 3. Instanzbefehle
     elif cmd.lower() in INSTANCE_MAP and arg:
         safe_instance = re.sub(r'[^a-zA-Z0-9_-]', '', arg)
         available_instances = await get_available_instances()
 
         if safe_instance not in available_instances:
-            await message.channel.send(f"❌ Die Instanz `{safe_instance}` wurde nicht gefunden.\n🔍 Nutze `bf!instances`, um alle gültigen Instanzen zu sehen.")
+            await message.channel.send(f"❌ Die Instanz `{safe_instance}` wurde nicht gefunden.\n🔍 Nutze `{COMMAND_PREFIX}instances`, um alle gültigen Instanzen zu sehen.")
             return
 
         shell_part, _, required_role = INSTANCE_MAP[cmd.lower()]
@@ -177,10 +184,10 @@ async def on_message(message):
             await message.channel.send(f"❌ Du benötigst die Rolle `{required_role}` oder `{ADMIN_ROLE}` für diesen Befehl.")
             return
 
-        shell_command = f"/home/ark/.local/bin/asa-manager {safe_instance} {shell_part}"
+        shell_command = f"{ASA_MANAGER_PATH} {safe_instance} {shell_part}"
         
     else:
-        await message.channel.send("❌ Befehl unbekannt oder unvollständig.\nℹ️ Gib `bf!info` ein für eine Übersicht aller gültigen Befehle.")
+        await message.channel.send("❌ Befehl unbekannt oder unvollständig.\nℹ️ Gib `{COMMAND_PREFIX}info` ein für eine Übersicht aller gültigen Befehle.")
         return
 
     try:
