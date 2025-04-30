@@ -13,25 +13,25 @@ print(configfile)
 with open(configfile, "r") as f:
     config = json.load(f)
 
-ASA_MANAGER_PATH = config["discord"]["generel"]["asa_manager_path"]
-TOKEN = config["discord"]["generel"]["token"]
-ADMIN_CHANNEL_ID = config["discord"]["generel"]["admin_channel_id"]
-ADMIN_ROLE = config["discord"]["generel"]["admin_role"]
-COMMAND_PREFIX = config["discord"]["command_prefix"]
+ASA_MANAGER_PATH = config["generel"]["asa_manager_path"]
+TOKEN = config["generel"]["token"]
+ADMIN_CHANNEL_ID = config["generel"]["admin_channel_id"]
+ADMIN_ROLE = config["generel"]["admin_role"]
+COMMAND_PREFIX = config["command_prefix"]
 
 COMMAND_MAP = {
     k: (v["shell"], v["description"], v["role"])
-    for k, v in config["discord"].get("commands", {}).items()
+    for k, v in config.get("commands", {}).items()
 }
 
 COMMAND_MAP_ALL = {
     k: (v["shell"], v["description"], v["role"])
-    for k, v in config["discord"].get("commands_all", {}).items()
+    for k, v in config.get("commands_all", {}).items()
 }
 
 INSTANCE_MAP = {
     k: (v["shell"], v["description"], v["role"])
-    for k, v in config["discord"].get("instance_commands", {}).items()
+    for k, v in config.get("instance_commands", {}).items()
 }
 
 # Discord Intents
