@@ -1,5 +1,5 @@
 {
-  "generel": {
+  "general": {
     "asa_manager_path": "/home/ark/.local/bin/asa-manager",
     "token": "",
     "command_prefix": "bf!",

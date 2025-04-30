@@ -13,11 +13,11 @@ print(configfile)
 with open(configfile, "r") as f:
     config = json.load(f)
 
-ASA_MANAGER_PATH = config["generel"]["asa_manager_path"]
-TOKEN = config["generel"]["token"]
-ADMIN_CHANNEL_ID = config["generel"]["admin_channel_id"]
-ADMIN_ROLE = config["generel"]["admin_role"]
-COMMAND_PREFIX = config["command_prefix"]
+ASA_MANAGER_PATH = config["general"]["asa_manager_path"]
+TOKEN = config["general"]["token"]
+ADMIN_CHANNEL_ID = config["general"]["admin_channel_id"]
+ADMIN_ROLE = config["general"]["admin_role"]
+COMMAND_PREFIX = config["general"]["command_prefix"]
 
 COMMAND_MAP = {
     k: (v["shell"], v["description"], v["role"])
