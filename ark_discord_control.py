@@ -108,7 +108,9 @@ async def on_message(message):
 
     content = message.content.strip()
     if content.startswith(COMMAND_PREFIX):
-        content = content[len(COMMAND_PREFIX):].strip()    
+        content = content[len(COMMAND_PREFIX):].strip()  
+    else:
+        return
     parts = content.split()
     cmd = parts[0] if len(parts) > 0 else None
     arg = parts[1] if len(parts) > 1 else None
