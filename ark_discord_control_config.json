@@ -2,6 +2,7 @@
   "general": {
     "asa_manager_path": "/home/ark/.local/bin/asa-manager",
     "token": "",
+	"webhook": "",
     "command_prefix": "bf!",
     "admin_role": "ADMIN",
     "admin_channel_id": 0000000000000000000,

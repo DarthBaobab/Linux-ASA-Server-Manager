@@ -38,8 +38,9 @@ PROTON_DIR="$BASE_DIR/$PROTON_VERSION"
 log_dir="$BASE_DIR/logs"
 mkdir -p "$log_dir"
 log_file="$log_dir/asa-manager_$(date +%F).log"
-#Logging Discord Webhook. link or ""
-discord_webhook="https://discord.com/api/webhooks/1360984927000072192/ihQhXEzwO7Dt7EIpewdLYJtGmFTLuzfKPa4mW4b_6qtf-Z9wLwgZU0KgwteyOaOSQR4J"
+#Logging Discord Webhook.
+config_file="$BASE_DIR/ark_discord_control_config.json"
+discord_webhook=$(jq -r '.general.webhook // ""' "$config_file")
 
 # Define URLs for SteamCMD and Proton.
 STEAMCMD_URL="https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz"
@@ -410,7 +411,7 @@ done
 # Function to list all instances
 list_instances() {
     # Reuse the helper function
-    get_available_instances
+    get_available_instances "all"
 
     if [ ${#available_instances[@]} -eq 0 ]; then
         log_message "${ERROR}No instances found in '$INSTANCES_DIR'.${RESET}"
@@ -1092,10 +1093,10 @@ backup_instance_world() {
 	local timestamp=$(date +"%Y-%m-%d_%H-%M-%S")
 	local archive_name="${instance}_${world_folder}_${timestamp}.tar.gz"
 	local archive_path="$backups_dir/$archive_name"
-
+	log_message "${INFO}Creating Backup: ${YELLOW}$archive_name${RESET}"
 	tar -czf "$archive_path" -C "$instance_dir" "$world_folder"
 	if [ $? -eq 0 ]; then
-		log_message "${OK}✅ Backup successfully created: $archive_path${RESET}"
+		log_message "${OK}✅ Backup successfully created: ${YELLOW}$archive_name${RESET}"
 	else
 		log_message "${ERROR}❌ Error creating the backup.${RESET}"
 		return 1
@@ -1105,14 +1106,14 @@ backup_instance_world() {
 	if tar -tzf "$archive_path" > /dev/null 2>&1; then
 		log_message "${OK}✅ Archive integrity verified.${RESET}"
 	else
-		log_message "${ERROR}❌ Backup archive is corrupted. Deleting: $archive_path${RESET}"
+		log_message "${ERROR}❌ Backup archive is corrupted. Deleting: ${YELLOW}$archive_name${RESET}"
 		rm -f "$archive_path"
 		return 1
 	fi
 	
 	# 🧮 Erzeuge SHA256-Checksumme
 	sha256sum "$archive_path" > "${archive_path}.sha256"
-	log_message "${OK}🔐 SHA256 checksum saved to ${archive_path}.sha256${RESET}"	
+	log_message "${OK}🔐 SHA256 checksum saved to ${YELLOW}${archive_name}.sha256${RESET}"	
 }
 
 #Load an existing backup (from the backups folder) into a target instance
@@ -1267,7 +1268,8 @@ cleanup_backups() {
         local age_days=$(( (now_ts - f_ts) / 86400 ))
 
         if (( age_days <= 1 )); then
-            continue  # Behalte alles < 24h
+            #continue  # Behalte alles < 24h
+			current_day_map["$f_ts"]="$f"
         elif (( age_days <= 7 )); then
             daily_map["$f_date"]="$f"
         elif (( age_days <= 30 )); then
@@ -1285,7 +1287,7 @@ cleanup_backups() {
 
     # --- Duplikate entfernen (außer die "letzten")
     for f in "${backups[@]}"; do
-        if [[ ! " ${daily_map[*]} ${weekly_map[*]} ${monthly_map[*]} " =~ $f ]]; then
+        if [[ ! " ${current_day_map[*]} ${daily_map[*]} ${weekly_map[*]} ${monthly_map[*]} " =~ $f ]]; then
             log_message "${INFO}🧹 Removing redundant backup: $f${RESET}"
             rm -f "$f" "${f}.sha256" 2>/dev/null
         fi

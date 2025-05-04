@@ -44,8 +44,11 @@ ark_manager="$script_dir/ark_instance_manager.sh"
 log_dir="$script_dir/logs"
 mkdir -p "$log_dir"
 log_file="$log_dir/asa-manager_$(date +%F).log"
-#Logging Discord Webhook. link or ""
-discord_webhook="https://discord.com/api/webhooks/1360984927000072192/ihQhXEzwO7Dt7EIpewdLYJtGmFTLuzfKPa4mW4b_6qtf-Z9wLwgZU0KgwteyOaOSQR4J"
+available_instances=()
+
+#Logging Discord Webhook.
+config_file="$script_dir/ark_discord_control_config.json"
+discord_webhook=$(jq -r '.general.webhook' "$config_file")
 
 # Time to wait between starting instances (in seconds). The server needs enough time to load the config, before the next instance starts.
 start_wait_time=30
@@ -84,7 +87,7 @@ get_available_instances() {
 		local instances_dir="$script_dir/instances"
 		local include_disabled="$1"
 		# Clear the array to avoid stale entries
-		local available_instances=()
+		available_instances=()
 
 		if [[ ! -d "$instances_dir" ]]; then
 			log_message "❌ Instances directory '$instances_dir' does not exist."
@@ -96,17 +99,18 @@ get_available_instances() {
 			#if [[ -d "$entry" && ! "$name" =~ _off$ ]]; then
 			if [[ -d "$entry" ]]; then
 				if [[ "$include_disabled" == "all" ]] || { [[ ! "$name" =~ _off$ ]] && [[ ! "$name" =~ Testserver ]]; }; then
-					 available_instances+=("$name")
+					available_instances+=("$name")
 				fi    
 			fi
 		done
 
-		# Ausgabe als Liste – Zeile pro Instanz
-		printf "%s\n" "${available_instances[@]}"
-		
-		instances=("${available_instances[@]}")
-
+	else
+		available_instances=("${instances[@]}")
 	fi
+	
+	# Ausgabe als Liste – Zeile pro Instanz
+	printf "%s\n" "${available_instances[@]}"
+	
 }
 
 # Function to execute a command for each instance (with optional wait time)
@@ -115,7 +119,7 @@ manage_instances() {
     local wait_time=$2
 	local target_instances=()
 	
-    for instance in "${instances[@]}"; do
+    for instance in "${available_instances[@]}"; do
         log_message "Executing '$action' for instance $instance..."
         $ark_manager "$instance" "$action"
         if [ $? -ne 0 ]; then
@@ -131,7 +135,7 @@ manage_instances() {
 # Function to send RCON command to all instances
 send_rcon_to_all() {
     local command=$1
-    for instance in "${instances[@]}"; do
+    for instance in "${available_instances[@]}"; do
         log_message "Sending RCON command '$command' to instance $instance..."
         $ark_manager "$instance" send_rcon "$command"
     done
@@ -163,6 +167,7 @@ announce_restart() {
 log_message "Starting ARK server restart process."
 
 get_available_instances "all"
+log_message "Instances to Stop: ${available_instances[*]}"
 
 # 1. Announce the restart with warning messages
 announce_restart
@@ -181,6 +186,7 @@ log_message "Wait 30 sec befor starting the servers"
 sleep 30
 
 get_available_instances
+log_message "Instances to Start: ${available_instances[*]}"
 
 # 4. Start the server instances one by one (with wait time between starts)
 manage_instances "start" "$start_wait_time"

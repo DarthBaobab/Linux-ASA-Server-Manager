@@ -187,7 +187,7 @@ async def on_message(message):
         shell_command = f"{ASA_MANAGER_PATH} {safe_instance} {shell_part}"
         
     else:
-        await message.channel.send("❌ Befehl unbekannt oder unvollständig.\nℹ️ Gib `{COMMAND_PREFIX}info` ein für eine Übersicht aller gültigen Befehle.")
+        await message.channel.send(f"❌ Befehl unbekannt oder unvollständig.\nℹ️ Gib `{COMMAND_PREFIX}info` ein für eine Übersicht aller gültigen Befehle.")
         return
 
     try:
