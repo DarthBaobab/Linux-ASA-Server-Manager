@@ -937,6 +937,12 @@ change_instance_name() {
     local instance=$1
     load_instance_config "$instance" || return 1
 
+    # Check if Server are running
+	if is_server_running "$instance"; then
+        log_message "${WARNING}Server for instance $instance is running. Please stop it first.${RESET}"
+        return 0
+    fi
+
     log_message "${CYAN}Enter the new name for instance '$instance' (or type 'cancel' to abort):${RESET}"
     read -r -e -i "$instance" new_instance_name
 
@@ -950,12 +956,6 @@ change_instance_name() {
     elif [ -d "$INSTANCES_DIR/$new_instance_name" ]; then
         log_message "${ERROR}An instance with the name '$new_instance_name' already exists.${RESET}"
         return 1
-    fi
-
-    # Stop the server if running
-    if is_server_running "$instance"; then
-        log_message "${WARNING}Stopping running server for instance '$instance' before renaming...${RESET}"
-        stop_server "$instance"
     fi
 
     # Rename instance directory
@@ -977,6 +977,58 @@ change_instance_name() {
     sed -i "s/^SaveDir=.*/SaveDir=$new_instance_name/" "$INSTANCES_DIR/$new_instance_name/instance_config.ini"
 
     log_message "${OK}Instance renamed from '$instance' to '$new_instance_name'.${RESET}"
+}
+
+# Function to enable/disable instance
+enable_disable_instance() {
+    local instance=$1
+    load_instance_config "$instance" || return 1
+	local new_instance_name
+    
+    # Check if Server are running
+	if is_server_running "$instance"; then
+        log_message "${WARNING}Server for instance $instance is running. Please stop it first.${RESET}"
+        return 0
+    fi
+
+    # Determine new instance name
+    if [[ "$instance" == *_off ]]; then
+        new_instance_name="${instance%_off}"
+    else
+        new_instance_name="${instance}_off"
+    fi
+	
+    # Check if new name already exists
+    if [ -d "$INSTANCES_DIR/$new_instance_name" ]; then
+        log_message "${ERROR}An instance with the name '$new_instance_name' already exists.${RESET}"
+        return 1
+    fi	
+	
+    # Rename instance directory
+    mv "$INSTANCES_DIR/$instance" "$INSTANCES_DIR/$new_instance_name" || {
+        log_message "${ERROR}Failed to rename instance directory.${RESET}"
+        return 1
+    }
+
+    # Rename save directories if they exist
+    if [ -d "$SERVER_FILES_DIR/ShooterGame/Saved/$instance" ]; then
+        mv "$SERVER_FILES_DIR/ShooterGame/Saved/$instance" "$SERVER_FILES_DIR/ShooterGame/Saved/$new_instance_name" || true
+    fi
+
+    if [ -d "$SERVER_FILES_DIR/ShooterGame/Saved/SavedArks/$instance" ]; then
+        mv "$SERVER_FILES_DIR/ShooterGame/Saved/SavedArks/$instance" "$SERVER_FILES_DIR/ShooterGame/Saved/SavedArks/$new_instance_name" || true
+    fi
+
+    # Update SaveDir in the instance configuration
+    sed -i "s/^SaveDir=.*/SaveDir=$new_instance_name/" "$INSTANCES_DIR/$new_instance_name/instance_config.ini"
+
+    if [[ "$new_instance_name" == *_off ]]; then
+		log_message "${OK}Instance '$instance' disabled.${RESET}"
+    else
+		log_message "${OK}Instance '$new_instance_name' enabled.${RESET}"
+    fi
+	
+	get_available_instances all
 }
 
 # Function to edit GameUserSettins.ini
@@ -1816,6 +1868,7 @@ manage_instance() {
             "Change Mods"
             "Check Server Status"
             "Change Instance Name"
+			"Enable/Disable Instance"
             "⏪ Previous instance"
             "⏩ Next instance"
             "🔙 Back to Main Menu"
@@ -1861,7 +1914,11 @@ manage_instance() {
                     instance=$new_instance_name  # Update the instance variable
 					break
                     ;;
-                10 | [Pp])  # Vorherige
+                10)
+					enable_disable_instance "$instance"
+					break
+					;;
+				11 | [Pp])  # Vorherige
                     if (( index == 0 )); then
                         echo -e "${WARNING}Already at first instance.${RESET}"
                     else
@@ -1869,7 +1926,7 @@ manage_instance() {
                         break
                     fi
 					;;
-				11 | [Nn])  # Nächste
+				12 | [Nn])  # Nächste
                     if (( index == ${#available_instances[@]} - 1 )); then
                         echo -e "${WARNING}Already at last instance.${RESET}"
                     else
@@ -1877,7 +1934,7 @@ manage_instance() {
                         break
                     fi
 					;;
-				12 | [Qq])
+				13 | [Qq])
 					return
                     ;;
                 *)
