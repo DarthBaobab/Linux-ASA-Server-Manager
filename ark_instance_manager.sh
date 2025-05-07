@@ -1736,20 +1736,20 @@ main_menu() {
         echo -e "${YELLOW}------------------------------${RESET}"
 
         options=(
-            "Install/Update Base Server"          # 1
-            "Check Update"                        # 2
-            "List Instances"                      # 3
-            "Create New Instance"                 # 4
-            "Manage Instance"                     # 5
-            "Change Instance Name"                # 6
-            "Delete Instance"                     # 7
-            "Start All Instances"                 # 8
-            "Stop All Instances"                  # 9
-            "Show Running Instances"              # 10
-            "Backup a World from Instance"        # 11
-            "Load Backup to Instance"             # 12
-            "Configure Restart Manager "          # 13
-            "Exit ARK Server Manager"             # 14
+            "📥 Install/Update Base Server    "          # 1
+            "🔄 Check Update                  "          # 2
+            "📋 List Instances                "          # 3
+            "🆕 Create New Instance           "          # 4
+            "🧩 Manage Instance               "          # 5
+            "✏️ Change Instance Name         "           # 6
+            "🗑️ Delete Instance              "           # 7
+            "🟢 Start All Instances           "          # 8
+            "🔴 Stop All Instances            "          # 9
+            "🧮 Show Running Instances        "          # 10
+            "💾 Backup a World from Instance  "          # 11
+            "📂 Load Backup to Instance       "          # 12
+            "♻️ Configure Restart Manager    "           # 13
+            "🔚 Exit ARK Server Manager       "          # 14
 
         )
 
@@ -1859,19 +1859,19 @@ manage_instance() {
 
         local PS3="Please choose an option: "
         options=(
-            "Start Server"
-            "Stop Server"
-            "Restart Server"
-            "Open RCON Console"
-            "Edit Configuration"
-            "Change Map"
-            "Change Mods"
-            "Check Server Status"
-            "Change Instance Name"
-			"Enable/Disable Instance"
-            "⏪ Previous instance"
-            "⏩ Next instance"
-            "🔙 Back to Main Menu"
+            "🟢 Start Server            "
+            "🔴 Stop Server             "
+            "🔁 Restart Server          "
+            "🖥️ Open RCON Console      "
+            "🛠️ Edit Configuration     "
+            "🗺️ Change Map             "
+            "🧩 Change Mods             "
+            "📊 Check Server Status     "
+            "✏️ Change Instance Name   "
+            "⚙️ Enable/Disable Instance"
+            "⏪ Previous instance       "
+            "⏩ Next instance           "
+            "🔙 Back to Main Menu       "
         )
 
         select opt in "${options[@]}"; do
