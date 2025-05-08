@@ -5,8 +5,8 @@
 	"webhook": "",
     "command_prefix": "bf!",
     "admin_role": "ADMIN",
-    "admin_channel_id": 0000000000000000000,
-    "log_channel_id": 0000000000000000000
+    "admin_channel_id": 1000000000000000000,
+    "log_channel_id": 1000000000000000000
   },
   "commands": {
     "update": {
