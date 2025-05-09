@@ -349,11 +349,11 @@ install_base_server() {
         log_message "${CYAN}First installation detected. Initializing Proton prefix...${RESET}"
 
         # Set Proton environment variables
-        export STEAM_COMPAT_DATA_PATH="$SERVER_FILES_DIR/steamapps/compatdata/2430930"
+        export STEAM_COMPAT_DATA_PATH="$SERVER_FILES_DIR/steamapps/compatdata/2430930/0-default"
         export STEAM_COMPAT_CLIENT_INSTALL_PATH="$BASE_DIR"
 
         # Initialize Proton prefix
-        initialize_proton_prefix
+        initialize_proton_prefix "0-default"
 
         log_message "${CYAN}Starting server once to generate configuration files... This will take 60 seconds${RESET}"
 
@@ -380,7 +380,10 @@ install_base_server() {
 
 # Function to initialize Proton prefix
 initialize_proton_prefix() {
-    local proton_prefix="$SERVER_FILES_DIR/steamapps/compatdata/2430930"
+    local instance=$1
+    local proton_prefix="$SERVER_FILES_DIR/steamapps/compatdata/2430930/$instance"
+
+    log_message "${CYAN}Initializing Proton prefix for instance '$instance'...${RESET}"
 
     # Ensure the directory exists
     mkdir -p "$proton_prefix"
@@ -592,8 +595,14 @@ start_server() {
     log_message "${CYAN}Starting server for instance: $instance${RESET}"
 
     # Set Proton environment variables
-    export STEAM_COMPAT_DATA_PATH="$SERVER_FILES_DIR/steamapps/compatdata/2430930"
+    export STEAM_COMPAT_DATA_PATH="$SERVER_FILES_DIR/steamapps/compatdata/2430930/$instance"
     export STEAM_COMPAT_CLIENT_INSTALL_PATH="$BASE_DIR"
+    
+    # Check if the Proton prefix exists
+    if [ ! -d "$STEAM_COMPAT_DATA_PATH" ]; then
+        # Initialize Proton prefix
+        initialize_proton_prefix "$instance"
+    fi
 
     # Ensure per-instance Config directory exists
     local instance_config_dir="$INSTANCES_DIR/$instance/Config"
@@ -1010,6 +1019,11 @@ change_instance_name() {
     if [ -d "$SERVER_FILES_DIR/ShooterGame/Saved/SavedArks/$instance" ]; then
         mv "$SERVER_FILES_DIR/ShooterGame/Saved/SavedArks/$instance" "$SERVER_FILES_DIR/ShooterGame/Saved/SavedArks/$new_instance_name" || true
     fi
+    
+    # Rename Proton Prefix directories if they exist    
+    if [ -d "$SERVER_FILES_DIR/steamapps/compatdata/2430930/$instance" ]; then
+        mv "$SERVER_FILES_DIR/steamapps/compatdata/2430930/$instance" "$SERVER_FILES_DIR/steamapps/compatdata/2430930/$new_instance_name" || true
+    fi
 
     # Update SaveDir in the instance configuration
     sed -i "s/^SaveDir=.*/SaveDir=$new_instance_name/" "$INSTANCES_DIR/$new_instance_name/instance_config.ini"
@@ -1055,6 +1069,11 @@ enable_disable_instance() {
 
     if [ -d "$SERVER_FILES_DIR/ShooterGame/Saved/SavedArks/$instance" ]; then
         mv "$SERVER_FILES_DIR/ShooterGame/Saved/SavedArks/$instance" "$SERVER_FILES_DIR/ShooterGame/Saved/SavedArks/$new_instance_name" || true
+    fi
+    
+    # Rename Proton Prefix directories if they exist
+    if [ -d "$SERVER_FILES_DIR/steamapps/compatdata/2430930/$instance" ]; then
+        mv "$SERVER_FILES_DIR/steamapps/compatdata/2430930/$instance" "$SERVER_FILES_DIR/steamapps/compatdata/2430930/$new_instance_name" || true
     fi
 
     # Update SaveDir in the instance configuration
