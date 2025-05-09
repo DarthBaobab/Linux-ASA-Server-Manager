@@ -671,6 +671,8 @@ stop_server() {
 
     load_instance_config "$instance" || return 1
 
+    send_rcon_command "$instance" "broadcast Server is shutting down. Please exit the game."
+
     # Save world before stopping
     save_instance "$instance"
 
@@ -1373,6 +1375,7 @@ save_instance() {
     fi
 
     log_message "${CYAN}Sending 'saveworld' to instance '$instance'...${RESET}"
+    send_rcon_command "$instance" "broadcast Server is saving world..."
     local response
     response=$(send_rcon_command "$instance" "saveworld")
 	
