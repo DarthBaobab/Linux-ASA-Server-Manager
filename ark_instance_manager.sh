@@ -1964,6 +1964,9 @@ manage_instance() {
 				11 | [Pp])  # Vorherige
                     if (( index == 0 )); then
                         echo -e "${WARNING}Already at first instance.${RESET}"
+                    elif (( index == 1 )); then
+                        index=0
+                        break
                     else
                         ((index = index - 1))
                         break
