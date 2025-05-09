@@ -723,6 +723,28 @@ stop_server() {
     return 0
 }
 
+# Function to restart the server
+restart_server() {
+    local instance=$1
+
+    if [ "$instance" == "all" ]; then
+        log_message "${INFO}Restarting all instances...${RESET}"
+        send_rcon_command_to_all "broadcast Server restart. Please exit the game."
+        stop_all_instances
+        start_all_instances
+    else
+        if ! is_server_running "$instance"; then
+            log_message "${WARNING}Server for instance $instance is not running. Starting the server...${RESET}"
+            start_server "$instance"
+        else
+            log_message "${INFO}Stopping server for instance $instance...${RESET}"
+            stop_server "$instance"
+            log_message "${INFO}Starting server for instance $instance...${RESET}"
+            start_server "$instance"
+        fi
+    fi
+}
+
 # Function to start RCON CLI
 start_rcon_cli() {
     local instance=$1
@@ -1762,11 +1784,12 @@ main_menu() {
             "🗑️ Delete Instance              "           # 7
             "🟢 Start All Instances           "          # 8
             "🔴 Stop All Instances            "          # 9
-            "🧮 Show Running Instances        "          # 10
-            "💾 Backup a World from Instance  "          # 11
-            "📂 Load Backup to Instance       "          # 12
-            "♻️ Configure Restart Manager    "           # 13
-            "🔚 Exit ARK Server Manager       "          # 14
+            "🔁 Restart All Instances         "          # 10
+            "🧮 Show Running Instances        "          # 11
+            "💾 Backup a World from Instance  "          # 12
+            "📂 Load Backup to Instance       "          # 13
+            "♻️ Configure Restart Manager    "           # 14
+            "🔚 Exit ARK Server Manager       "          # 15
 
         )
 
@@ -1816,23 +1839,27 @@ main_menu() {
                     break
                     ;;
                 10)
-                    show_running_instances
+                    restart_server "all"
                     break
                     ;;
                 11)
-                    menu_backup_world
+                    show_running_instances
                     break
                     ;;
                 12)
-                    menu_restore_world
+                    menu_backup_world
                     break
                     ;;
                 13)
+                    menu_restore_world
+                    break
+                    ;;
+                14)
                     #configure_companion_script
 					echo -e "Restart Manager Configuration is not available!"
                     break
                     ;;
-                14 | [Qq])
+                15 | [Qq])
                     echo -e "${GREEN}Exiting ARK Server Manager. Goodbye!${RESET}"
                     exit 0
                     ;;
@@ -1902,8 +1929,7 @@ manage_instance() {
 					break
                     ;;
                 3)
-                    stop_server "$instance"
-                    start_server "$instance"
+                    restart_server "$instance"
 					break
                     ;;
                 4)
@@ -1984,8 +2010,7 @@ else
             $ARK_RESTART_MANAGER
             ;;   
         restart_all_now)
-            stop_all_instances
-            start_all_instances
+            restart_server "all"    
             ;;   
         setup)
             setup_symlink
@@ -2031,8 +2056,7 @@ else
                     stop_server "$instance_name"
                     ;;
                 restart)
-                    stop_server "$instance_name"
-                    start_server "$instance_name"
+                    restart_server "$instance_name"
                     ;;
                 send_rcon)
                     if [ $# -lt 3 ]; then
