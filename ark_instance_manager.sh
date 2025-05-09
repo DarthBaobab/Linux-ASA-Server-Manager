@@ -643,7 +643,21 @@ start_server() {
     -mods="$MOD_IDS" \
     > "$INSTANCES_DIR/$instance/server.log" 2>&1 &
 
-    log_message "${OK}Server started for instance: $instance. It should be fully operational in approximately 60 seconds.${RESET}"
+    log_message "${INFO}Server started for instance: $instance. Waiting for it to become operational...${RESET}"
+
+    # Wait for the server to start and check if it's running
+    local timeout=60
+    local waited=0
+    while ! is_server_running "$instance"; do
+        sleep 2
+        ((waited += 2))
+        if [ $waited -ge $timeout ]; then
+            log_message "${ERROR}Server for instance $instance failed to start within $timeout seconds.${RESET}"
+            return 1
+        fi
+    done
+
+    log_message "${OK}Server for instance $instance is now running and operational.${RESET}"
 }
 
 # Function to stop the server
