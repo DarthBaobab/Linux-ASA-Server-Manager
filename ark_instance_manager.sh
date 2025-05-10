@@ -1789,104 +1789,89 @@ $messages_str)
 # Main menu using 'select'
 main_menu() {
     while true; do
-        echo -e "${YELLOW}------------------------------${RESET}"
-        echo -e "${YELLOW}ARK Server Instance Management${RESET}"
-        echo -e "${YELLOW}------------------------------${RESET}"
-
-        options=(
-            "📥 Install/Update Base Server    "          # 1
-            "🔄 Check Update                  "          # 2
-            "📋 List Instances                "          # 3
-            "🆕 Create New Instance           "          # 4
-            "🧩 Manage Instance               "          # 5
-            "✏️ Change Instance Name         "           # 6
-            "🗑️ Delete Instance              "           # 7
-            "🟢 Start All Instances           "          # 8
-            "🔴 Stop All Instances            "          # 9
-            "🔁 Restart All Instances         "          # 10
-            "🧮 Show Running Instances        "          # 11
-            "💾 Backup a World from Instance  "          # 12
-            "📂 Load Backup to Instance       "          # 13
-            "♻️ Configure Restart Manager    "           # 14
-            "🔚 Exit ARK Server Manager       "          # 15
-
+        # Define menu options
+        local options=(
+            1 "Install/Update Base Server"
+            2 "Check Update"
+            3 "List Instances"
+            4 "Create New Instance"
+            5 "Manage Instance"
+            6 "Change Instance Name"
+            7 "Delete Instance"
+            8 "Start All Instances"
+            9 "Stop All Instances"
+            10 "Restart All Instances"
+            11 "Show Running Instances"
+            12 "Backup a World from Instance"
+            13 "Load Backup to Instance"
+            14 "Configure Restart Manager"
         )
 
-        PS3="Please choose an option: "
-        select opt in "${options[@]}"; do
-            case "$REPLY" in
-                1)
-                    install_base_server
-                    break
-                    ;;
-                2)
-                    checkForUpdate
-                    break
-                    ;;
-                3)
-                    list_instances
-                    break
-                    ;;
-                4)
-                    create_instance
-                    break
-                    ;;
-                5)
-                    if select_instance; then
-                        manage_instance "$selected_instance"
-                    fi
-                    break
-                    ;;
-                6)
-                    if select_instance; then
-                        change_instance_name "$selected_instance"
-                    fi
-                    break
-                    ;;
-                7)
-                    if select_instance; then
-                        delete_instance "$selected_instance"
-                    fi
-                    break
-                    ;;
-                8)
-                    start_all_instances
-                    break
-                    ;;
-                9)
-                    stop_all_instances
-                    break
-                    ;;
-                10)
-                    restart_server "all"
-                    break
-                    ;;
-                11)
-                    show_running_instances
-                    break
-                    ;;
-                12)
-                    menu_backup_world
-                    break
-                    ;;
-                13)
-                    menu_restore_world
-                    break
-                    ;;
-                14)
-                    #configure_companion_script
-					echo -e "Restart Manager Configuration is not available!"
-                    break
-                    ;;
-                15 | [Qq])
-                    echo -e "${GREEN}Exiting ARK Server Manager. Goodbye!${RESET}"
-                    exit 0
-                    ;;
-                *)
-                    echo -e "${ERROR}Invalid option selected.${RESET}"
-                    ;;
-            esac
-        done
+        # Display the menu using dialog
+        local choice=$(dialog --clear --title "ARK Server Instance Management" \
+            --menu "Use the arrow keys to navigate and select an option:" 20 70 15 \
+            "${options[@]}" 2>&1 >/dev/tty)
+
+        # Clear the screen after the menu
+        clear
+
+        # Handle Cancel or Escape
+        if [ -z "$choice" ]; then
+            #echo -e "${GREEN}Exiting ARK Server Manager. Goodbye!${RESET}"
+            exit 0
+        fi
+
+        # Handle user input
+        case "$choice" in
+            1)
+                install_base_server
+                ;;
+            2)
+                checkForUpdate
+                ;;
+            3)
+                list_instances
+                ;;
+            4)
+                create_instance
+                ;;
+            5)
+                if select_instance; then
+                    manage_instance "$selected_instance"
+                fi
+                ;;
+            6)
+                if select_instance; then
+                    change_instance_name "$selected_instance"
+                fi
+                ;;
+            7)
+                if select_instance; then
+                    delete_instance "$selected_instance"
+                fi
+                ;;
+            8)
+                start_all_instances
+                ;;
+            9)
+                stop_all_instances
+                ;;
+            10)
+                restart_server "all"
+                ;;
+            11)
+                show_running_instances
+                ;;
+            12)
+                menu_backup_world
+                ;;
+            13)
+                menu_restore_world
+                ;;
+            14)
+                dialog --title "Information" --msgbox "Restart Manager Configuration is not available!"
+                ;;
+        esac
     done
 }
 
@@ -1911,102 +1896,84 @@ manage_instance() {
     done
 
     while true; do
-		if (( index < 0 )); then index=0; fi
+        if (( index < 0 )); then index=0; fi
         if (( index >= ${#available_instances[@]} )); then index=$(( ${#available_instances[@]} - 1 )); fi
 
         local instance="${available_instances[$index]}"
 
-        echo -e "${YELLOW}--------------------------------${RESET}"
-        echo -e "${YELLOW}Managing Instance: $instance${RESET} ($((index + 1))/${#available_instances[@]})"
-        echo -e "${YELLOW}--------------------------------${RESET}"
-
-        local PS3="Please choose an option: "
-        options=(
-            "🟢 Start Server            "
-            "🔴 Stop Server             "
-            "🔁 Restart Server          "
-            "🖥️ Open RCON Console      "
-            "🛠️ Edit Configuration     "
-            "🗺️ Change Map             "
-            "🧩 Change Mods             "
-            "📊 Check Server Status     "
-            "✏️ Change Instance Name   "
-            "⚙️ Enable/Disable Instance"
-            "⏪ Previous instance       "
-            "⏩ Next instance           "
-            "🔙 Back to Main Menu       "
+        local options=(
+            1 "🟢 Start Server"
+            2 "🔴 Stop Server"
+            3 "🔁 Restart Server"
+            4 "🖥️ Open RCON Console"
+            5 "🛠️ Edit Configuration"
+            6 "🗺️ Change Map"
+            7 "🧩 Change Mods"
+            8 "📊 Check Server Status"
+            9 "✏️ Change Instance Name"
+            10 "⚙️ Enable/Disable Instance"
+            11 "⏪ Previous Instance"
+            12 "⏩ Next Instance"
         )
 
-        select opt in "${options[@]}"; do
-            case "$REPLY" in
-                1)
-                    start_server "$instance"
-					break
-                    ;;
-                2)
-                    stop_server "$instance"
-					break
-                    ;;
-                3)
-                    restart_server "$instance"
-					break
-                    ;;
-                4)
-                    start_rcon_cli "$instance"
-					break
-                    ;;
-                5)
-                    edit_configuration_menu "$instance"
-					break
-                    ;;
-                6)
-                    change_map "$instance"
-					break
-                    ;;
-                7)
-                    change_mods "$instance"
-					break
-                    ;;
-                8)
-                    check_server_status "$instance"
-					break
-                    ;;
-                9)
-                    change_instance_name "$instance"
-                    instance=$new_instance_name  # Update the instance variable
-					break
-                    ;;
-                10)
-					enable_disable_instance "$instance"
-					break
-					;;
-				11 | [Pp])  # Vorherige
-                    if (( index == 0 )); then
-                        echo -e "${WARNING}Already at first instance.${RESET}"
-                    elif (( index == 1 )); then
-                        index=0
-                        break
-                    else
-                        ((index = index - 1))
-                        break
-                    fi
-					;;
-				12 | [Nn])  # Nächste
-                    if (( index == ${#available_instances[@]} - 1 )); then
-                        echo -e "${WARNING}Already at last instance.${RESET}"
-                    else
-                        ((index = index + 1))
-                        break
-                    fi
-					;;
-				13 | [Qq])
-					return
-                    ;;
-                *)
-                    echo -e "${ERROR}Invalid option selected.${RESET}"
-                    ;;
-            esac
-        done
+        local choice=$(dialog --clear --title "Managing Instance: $instance ($((index + 1))/${#available_instances[@]})" \
+            --menu "Choose an option:" 20 70 15 \
+            "${options[@]}" 2>&1 >/dev/tty)
+
+        clear
+
+        # Handle Cancel or Escape
+        if [ -z "$choice" ]; then
+            return
+        fi
+
+        case "$choice" in
+            1)
+                start_server "$instance"
+                ;;
+            2)
+                stop_server "$instance"
+                ;;
+            3)
+                restart_server "$instance"
+                ;;
+            4)
+                start_rcon_cli "$instance"
+                ;;
+            5)
+                edit_configuration_menu "$instance"
+                ;;
+            6)
+                change_map "$instance"
+                ;;
+            7)
+                change_mods "$instance"
+                ;;
+            8)
+                check_server_status "$instance"
+                ;;
+            9)
+                change_instance_name "$instance"
+                instance=$new_instance_name  # Update the instance variable
+                ;;
+            10)
+                enable_disable_instance "$instance"
+                ;;
+            11)
+                if (( index == 0 )); then
+                    dialog --msgbox "Already at the first instance." 6 40
+                else
+                    ((index--))
+                fi
+                ;;
+            12)
+                if (( index == ${#available_instances[@]} - 1 )); then
+                    dialog --msgbox "Already at the last instance." 6 40
+                else
+                    ((index++))
+                fi
+                ;;
+        esac
     done
 }
 
