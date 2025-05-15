@@ -63,7 +63,7 @@ log_message() {
     echo "$timestamp - $message" >> "$log_file"
 
     # auch auf der Konsole anzeigen
-    echo -e "${CYAN}$timestamp - $message${RESET}"
+    echo -e "$timestamp - $message"
 
     # Farben für Discord entfernen
     local message_no_color
