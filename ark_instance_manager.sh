@@ -639,6 +639,9 @@ select_instance() {
 }
 # Function to start the server
 start_server() {
+    gauge_steps=11
+    gauge_stage=0
+
     local instance=$1
     # Check for duplicate ports
     if ! check_for_duplicate_ports; then
@@ -646,14 +649,23 @@ start_server() {
         return 1
     fi
 
+    ((gauge_stage++))
+    gauge_progress $gauge_stage $gauge_steps
+
     if is_server_running "$instance"; then
         log_message "${YELLOW}Server for instance $instance is already running."
         return 0
     fi
 
+    ((gauge_stage++))
+    gauge_progress $gauge_stage $gauge_steps
+
     load_instance_config "$instance" || return 1
 
     log_message "${CYAN}Starting server for instance: $instance"
+
+    ((gauge_stage++))
+    gauge_progress $gauge_stage $gauge_steps
 
     # Set Proton environment variables
     export STEAM_COMPAT_DATA_PATH="$SERVER_FILES_DIR/steamapps/compatdata/2430930/$instance"
@@ -665,6 +677,9 @@ start_server() {
         initialize_proton_prefix "$instance"
     fi
 
+    ((gauge_stage++))
+    gauge_progress $gauge_stage $gauge_steps
+
     # Ensure per-instance Config directory exists
     local instance_config_dir="$INSTANCES_DIR/$instance/Config"
     if [ ! -d "$instance_config_dir" ]; then
@@ -674,18 +689,30 @@ start_server() {
         chmod 600 "$instance_config_dir/GameUserSettings.ini" || true
     fi
 
+    ((gauge_stage++))
+    gauge_progress $gauge_stage $gauge_steps
+
     # Backup the original Config directory if not already backed up
     if [ ! -L "$SERVER_FILES_DIR/ShooterGame/Saved/Config/WindowsServer" ] && [ -d "$SERVER_FILES_DIR/ShooterGame/Saved/Config/WindowsServer" ]; then
         mv "$SERVER_FILES_DIR/ShooterGame/Saved/Config/WindowsServer" "$SERVER_FILES_DIR/ShooterGame/Saved/Config/WindowsServer.bak" || true
     fi
 
+    ((gauge_stage++))
+    gauge_progress $gauge_stage $gauge_steps
+
     # Link the instance Config directory
     rm -rf "$SERVER_FILES_DIR/ShooterGame/Saved/Config/WindowsServer" || true
     ln -s "$instance_config_dir" "$SERVER_FILES_DIR/ShooterGame/Saved/Config/WindowsServer" || true
 
+    ((gauge_stage++))
+    gauge_progress $gauge_stage $gauge_steps
+
     # Ensure per-instance save directory exists
     local save_dir="$SERVER_FILES_DIR/ShooterGame/Saved/SavedArks/$SAVE_DIR"
     mkdir -p "$save_dir" || true
+
+    ((gauge_stage++))
+    gauge_progress $gauge_stage $gauge_steps
 
     # Set cluster parameters if ClusterID is set
     local cluster_params=""
@@ -694,6 +721,9 @@ start_server() {
         mkdir -p "$cluster_dir" || true
         cluster_params="-ClusterDirOverride=\"$cluster_dir\" -ClusterId=\"$CLUSTER_ID\""
     fi
+
+    ((gauge_stage++))
+    gauge_progress $gauge_stage $gauge_steps
 
     # Start the server using the loaded configuration variables
 
@@ -715,6 +745,9 @@ start_server() {
 
     log_message "${BLUE}Server started for instance: $instance. Waiting for it to become operational..."
 
+    ((gauge_stage++))
+    gauge_progress $gauge_stage $gauge_steps
+
     # Wait for the server to start and check if it's running
     local timeout=60
     local waited=0
@@ -728,6 +761,9 @@ start_server() {
     done
 
     log_message "${GREEN}Server for instance $instance is now running and operational."
+
+    ((gauge_stage++))
+    gauge_progress $gauge_stage $gauge_steps
 }
 
 # Function to stop the server
@@ -1971,7 +2007,9 @@ main_menu() {
                 run_with_live_dialog "Show Running Instances" "Show Running Instances" show_running_instances
                 ;;
             10)
-                menu_backup_world
+                if select_instance; then
+                    backup_instance_world "$selected_instance"
+                fi
                 ;;
             11)
                 menu_restore_world
@@ -2025,7 +2063,7 @@ manage_instance() {
             13 "↓   Next Instance"
         )
 
-        local choice=$(dialog --clear --title "Managing Instance: $instance ($((index + 1))/${#available_instances[@]})" \
+        local choice=$(dialog --begin 1 5 --clear --title "Managing Instance: $instance ($((index + 1))/${#available_instances[@]})" \
             --menu "Choose an option:" 0 0 0 \
             "${options[@]}" 2>&1 >/dev/tty)
 
@@ -2038,13 +2076,13 @@ manage_instance() {
 
         case "$choice" in
             1)
-                run_with_live_dialog "Server Start" start_server "$instance"
+                run_with_live_dialog "Server Start" "Server Start" start_server "$instance"
                 ;;
             2)
-                run_with_live_dialog "Server Stop" stop_server "$instance"
+                run_with_live_dialog "Server Stop" "Server Stop" stop_server "$instance"
                 ;;
             3)
-                run_with_live_dialog "Server Restart" restart_server "$instance"
+                run_with_live_dialog "Server Restart" "Server Restart" restart_server "$instance"
                 ;;
             4)
                 start_rcon_cli "$instance"
