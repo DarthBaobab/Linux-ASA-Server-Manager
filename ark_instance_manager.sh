@@ -666,6 +666,9 @@ start_server() {
         fi
     done
 
+    # Create a "start" file in the instance directory to indicate the server was started
+    touch "$INSTANCES_DIR/$instance/start"
+
     log_message "${OK}Server for instance $instance is now running and operational.${RESET}"
 }
 
@@ -719,6 +722,9 @@ stop_server() {
         #return 0
     fi
 	
+    # Remove the "start" file to indicate the server is stopped
+    rm -f "$INSTANCES_DIR/$instance/start"
+
 	# --- 🟢 BACKUP nach dem Stop ---
     log_message "${CYAN}Creating backup after stopping instance '$instance'...${RESET}"
     backup_instance_world "$instance"
@@ -752,6 +758,22 @@ restart_server() {
             start_server "$instance"
         fi
     fi
+}
+
+# Function: Checks if instances marked with a "start" file are running, and starts them if not.
+check_and_start_marked_instances() {
+    get_available_instances all
+    for instance in "${available_instances[@]}"; do
+        start_file="$INSTANCES_DIR/$instance/start"
+        if [ -f "$start_file" ]; then
+            if ! is_server_running "$instance"; then
+                log_message "${WARNING}Instance '$instance' is marked to run (start file exists) but is not running. Starting...${RESET}"
+                start_server "$instance"
+            else
+                log_message "${OK}Instance '$instance' is marked and already running.${RESET}"
+            fi
+        fi
+    done
 }
 
 # Function to start RCON CLI
@@ -2066,6 +2088,9 @@ else
                 exit 1
             fi
             delete_instance "$2"
+            ;;
+        check_marked_instances)
+            check_and_start_marked_instances
             ;;
         *)
             instance_name=$1
