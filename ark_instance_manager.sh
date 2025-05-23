@@ -699,6 +699,9 @@ stop_server() {
 	if echo "$response" | grep -qi "Exiting..."; then	
         log_message "${OK}Server instance $instance reported 'Exiting...'. Awaiting shutdown...${RESET}"
 
+        # Remove the "start" file to indicate the server is stopped
+        rm -f "$INSTANCES_DIR/$instance/start"
+
         # Check in a loop if the process is still running
         local timeout=120  # Give 30 seconds
         local waited=0
@@ -722,9 +725,6 @@ stop_server() {
         #return 0
     fi
 	
-    # Remove the "start" file to indicate the server is stopped
-    rm -f "$INSTANCES_DIR/$instance/start"
-
 	# --- 🟢 BACKUP nach dem Stop ---
     log_message "${CYAN}Creating backup after stopping instance '$instance'...${RESET}"
     backup_instance_world "$instance"
