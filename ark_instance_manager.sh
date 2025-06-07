@@ -933,9 +933,11 @@ send_rcon_command_to_all() {
 show_running_instances() {
     log_message "${CYAN}Checking running instances...${RESET}"
     local running_count=0
-    for instance in "$INSTANCES_DIR"/*; do
+    get_available_instances
+    for instance_name in "${available_instances[@]}"; do
+        instance="$INSTANCES_DIR/$instance_name"
         if [ -d "$instance" ]; then
-            instance_name=$(basename "$instance")
+            #instance_name=$(basename "$instance")
             # Load instance configuration
             load_instance_config "$instance_name" || continue
             # Check if the server is running
@@ -1174,7 +1176,7 @@ backup_instance_world() {
     fi
 
 	# Create backup directory
-	local backups_dir="$BASE_DIR/backups"
+	local backups_dir="$BASE_DIR/backups/$instance"
 	mkdir -p "$backups_dir"
 
 
@@ -1257,7 +1259,7 @@ restore_backup_to_instance() {
         return 1
     fi
 
-    local backups_dir="$BASE_DIR/backups"
+    local backups_dir="$BASE_DIR/backups/$target_instance"
     set +e
     if [ ! -d "$backups_dir" ]; then
         log_message "${ERROR}Backup directory '$backups_dir' does not exist.${RESET}"
@@ -1351,7 +1353,7 @@ backup_instance_world_cli() {
         return 1
     fi
 
-    local backups_dir="$BASE_DIR/backups"
+    local backups_dir="$BASE_DIR/backups/$instance"
     mkdir -p "$backups_dir"
 
     local timestamp=$(date +"%Y-%m-%d_%H-%M-%S")
@@ -1372,6 +1374,13 @@ backup_instance_world_cli() {
 cleanup_backups() {
     local backups_dir="$BASE_DIR/backups"
     local instance_filter="$1"  # optional: nur bestimmte Instanz
+    local pattern="*.tar.gz"
+    local instances=()
+
+    # Zeitgrenzen in Tagen
+    local DAYS_KEEP_ALL=7
+    local DAYS_KEEP_WEEKLY=60
+    local DAYS_KEEP_MONTHLY=365
 
     log_message "${CYAN}Cleaning up backups...${RESET}"
 
@@ -1381,47 +1390,56 @@ cleanup_backups() {
     # 4) Älter → löschen
 
     # --- Filter anwenden (falls gewünscht)
-    local pattern="*.tar.gz"
-    if [ -n "$instance_filter" ]; then
-        pattern="${instance_filter}_*.tar.gz"
-    fi
-
-    # --- Hole Liste der Backups
-    mapfile -t backups < <(find "$backups_dir" -type f -name "$pattern" | sort)
-
-    # --- Gruppieren nach Datum (Format: YYYY-MM-DD)
-    declare -A daily_map weekly_map monthly_map
-    local now_ts=$(date +%s)
-
-    for f in "${backups[@]}"; do
-        local f_ts=$(stat -c %Y "$f")
-        local f_date=$(date -d @"$f_ts" +%F)
-        local age_days=$(( (now_ts - f_ts) / 86400 ))
-
-        if (( age_days <= 1 )); then
-            #continue  # Behalte alles < 24h
-			current_day_map["$f_ts"]="$f"
-        elif (( age_days <= 7 )); then
-            daily_map["$f_date"]="$f"
-        elif (( age_days <= 30 )); then
-            local week_id=$(date -d @"$f_ts" +%G-%V)
-            weekly_map["$week_id"]="$f"
-        elif (( age_days <= 365 )); then
-            local month_id=$(date -d @"$f_ts" +%Y-%m)
-            monthly_map["$month_id"]="$f"
-        else
-            # Älter als 1 Jahr → löschen
-            log_message "${INFO}🧹 Deleting old backup: $f${RESET}"
-            rm -f "$f" "${f}.sha256" 2>/dev/null
-        fi
+	for entry in "$backups_dir"/*; do
+		name="$(basename "$entry")"
+		#if [[ -d "$entry" && ! "$name" =~ _off$ ]]; then
+		if [[ -d "$entry" ]]; then
+			if [[ -z "$instance_filter" || "$name" == "$instance_filter" ]]; then
+				instances+=("$name")
+            fi
+		fi
     done
 
-    # --- Duplikate entfernen (außer die "letzten")
-    for f in "${backups[@]}"; do
-        if [[ ! " ${current_day_map[*]} ${daily_map[*]} ${weekly_map[*]} ${monthly_map[*]} " =~ $f ]]; then
-            log_message "${INFO}🧹 Removing redundant backup: $f${RESET}"
-            rm -f "$f" "${f}.sha256" 2>/dev/null
-        fi
+    for instance in "${instances[@]}"; do
+        local backups_instance_dir="$backups_dir/$instance"
+        log_message "${CYAN}Cleaning up backups for instance '$instance'...${RESET}"
+        
+        # --- Hole Liste der Backups
+        mapfile -t backups < <(find "$backups_instance_dir" -type f -name "$pattern" | sort)
+
+        # --- Gruppieren nach Datum (Format: YYYY-MM-DD)
+        declare -A KEEP_FILES=()
+        local now=$(date +%s)
+
+        # Durchlaufe alle Dateien
+        for FILE in "${backups[@]}"; do
+            # Änderungsdatum in Sekunden
+            MTIME=$(stat -c %Y "$FILE")
+            AGE_DAYS=$(( (now - MTIME) / 86400 ))
+
+            if (( AGE_DAYS <= DAYS_KEEP_ALL )); then
+                # Immer behalten
+                KEEP_FILES["$FILE"]=1
+            elif (( AGE_DAYS <= DAYS_KEEP_WEEKLY )); then
+                # Nur erstes Backup der Woche behalten
+                WEEK=$(date -d @"$MTIME" +%G-%V)  # Jahr-Woche
+                [[ -z "${KEEP_FILES["week_$WEEK"]}" ]] && KEEP_FILES["$FILE"]=1 KEEP_FILES["week_$WEEK"]=1
+            elif (( AGE_DAYS <= DAYS_KEEP_MONTHLY )); then
+                # Nur erstes Backup des Monats behalten
+                MONTH=$(date -d @"$MTIME" +%Y-%m)
+                [[ -z "${KEEP_FILES["month_$MONTH"]}" ]] && KEEP_FILES["$FILE"]=1 KEEP_FILES["month_$MONTH"]=1
+            fi
+        done
+
+        # Alles löschen, was nicht in KEEP_FILES ist
+        for FILE in "${backups[@]}"; do
+            if [[ -z "${KEEP_FILES["$FILE"]}" ]]; then
+                log_message "Delete: $FILE"
+                rm -f "$FILE" "${FILE}.sha256" 2>/dev/null
+            else
+                log_message "Keep: $FILE"
+            fi
+        done
     done
 
     log_message "${OK}✔ Backup cleanup complete.${RESET}"
