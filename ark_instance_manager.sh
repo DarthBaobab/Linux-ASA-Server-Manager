@@ -648,7 +648,7 @@ start_server() {
     -game \
     $cluster_params \
     -server \
-    -log \
+    -log="$instance.log" \
     -mods="$MOD_IDS" \
     > "$INSTANCES_DIR/$instance/server.log" 2>&1 &
 
