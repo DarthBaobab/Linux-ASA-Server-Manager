@@ -2,9 +2,13 @@
 set -e
 
 # Colors
-GREEN="\e[32m"
-RED="\e[31m"
-RESET="\e[0m"
+# Color definitions
+RED='🔴'
+YELLOW='🟡'
+GREEN='🟢'
+BLUE='🔵'
+MAGENTA='🟣'
+CYAN='🔷'
 
 STEAMCMDDIR="/opt/steamcmd"
 PROTON_VERSION="${PROTON_VERSION:-GE-Proton9-21}"
@@ -29,23 +33,23 @@ prepare_permissions() {
 #prepare_permissions
 
 update_ark() {
-  echo -e "${GREEN}>>> Updating ARK server binaries at $ARK_BINARIES${RESET}"
+  echo -e "${GREEN}>>> Updating ARK server binaries at $ARK_BINARIES"
   mkdir -p "$ARK_BINARIES"
   "${STEAMCMDDIR}/steamcmd.sh" \
     +force_install_dir "$ARK_BINARIES" \
     +login anonymous \
     +app_update "${ARK_APPID}" validate \
     +quit
-  echo -e "${GREEN}>>> ARK update complete${RESET}"
+  echo -e "${GREEN}>>> ARK update complete"
 }
 
 init_proton_prefix() {
   local prefix="$ARK_BINARIES/steamapps/compatdata/$ARK_APPID"
   if [ ! -d "$prefix/pfx" ]; then
-    echo -e "${GREEN}>>> Initializing Proton prefix in $prefix${RESET}"
+    echo -e "${GREEN}>>> Initializing Proton prefix in $prefix"
     mkdir -p "$prefix"
     cp -r "$PROTONDIR/files/share/default_pfx/." "$prefix/" || {
-      echo -e "${RED}Error copying default_pfx!${RESET}"
+      echo -e "${RED}Error copying default_pfx!"
       exit 1
     }
   fi
@@ -53,11 +57,11 @@ init_proton_prefix() {
 
 run_server() {
   if [ $# -eq 0 ]; then
-    echo -e "${RED}No start parameters provided. Aborting.${RESET}"
+    echo -e "${RED}No start parameters provided. Aborting."
     exit 1
   fi
 
-  echo -e "${GREEN}>>> Starting ARK server with parameters: $@${RESET}"
+  echo -e "${GREEN}>>> Starting ARK server with parameters: $@"
 
   # Proton environment variables
   export STEAM_COMPAT_DATA_PATH="$ARK_BINARIES/steamapps/compatdata/$ARK_APPID"
@@ -70,12 +74,12 @@ run_server() {
 
   # Instance-specific configurations
   if [ -f "$ARK_INSTANCE/Game.ini" ]; then
-    echo -e "${GREEN}>>> Loaded instance-specific Game.ini${RESET}"
+    echo -e "${GREEN}>>> Loaded instance-specific Game.ini"
     ln -sf "$ARK_INSTANCE/Game.ini" "$ARK_BINARIES/ShooterGame/Saved/Config/WindowsServer/Game.ini"
   fi
 
   if [ -f "$ARK_INSTANCE/GameUserSettings.ini" ]; then
-    echo -e "${GREEN}>>> Loaded instance-specific GameUserSettings.ini${RESET}"
+    echo -e "${GREEN}>>> Loaded instance-specific GameUserSettings.ini"
     ln -sf "$ARK_INSTANCE/GameUserSettings.ini" "$ARK_BINARIES/ShooterGame/Saved/Config/WindowsServer/GameUserSettings.ini"
   fi
 
