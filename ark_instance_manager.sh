@@ -603,9 +603,10 @@ select_instance() {
     local instances=()
     local menu_items=()
     local i=1
+    local selected_dir=${1:-$INSTANCES_DIR}
 
     # Populate the instances array
-    for dir in "$INSTANCES_DIR"/*; do
+    for dir in "$selected_dir"/*; do
         if [ -d "$dir" ]; then
             local name
             name="$(basename "$dir")"
@@ -2197,7 +2198,7 @@ main_menu() {
                 fi
                 ;;
             11)
-                if select_instance; then
+                if select_instance "$BASE_DIR/backups"; then
                     if is_server_running "$selected_instance"; then
                         log_message "${RED}The server for instance '$selected_instance' is running. Please stop it first."
                         dialog --begin 1 5 --no-shadow --msgbox "${RED}The server for instance '$selected_instance' is running. Please stop it first." 10 50
