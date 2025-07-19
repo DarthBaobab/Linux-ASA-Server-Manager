@@ -138,13 +138,13 @@ check_dependencies() {
             "apt-get")
                 log_message "${MAGENTA}sudo dpkg --add-architecture i386"
                 log_message "${MAGENTA}sudo apt update"
-                log_message "${MAGENTA}sudo apt-get install ${YELLOW}${missing[*]}"
+                log_message "${MAGENTA}sudo apt-get install ${missing[*]}"
                 ;;
             "zypper")
-                log_message "${MAGENTA}sudo zypper install ${YELLOW}${missing[*]}"
+                log_message "${MAGENTA}sudo zypper install ${missing[*]}"
                 ;;
             "dnf")
-                log_message "${MAGENTA}sudo dnf install ${YELLOW}${missing[*]}"
+                log_message "${MAGENTA}sudo dnf install ${missing[*]}"
                 ;;
             "pacman")
                 echo -e "${BLUE}For Arch Linux users:"
