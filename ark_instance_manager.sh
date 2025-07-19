@@ -36,7 +36,7 @@ log_file="$log_dir/asa-manager_$(date +%F).log"
 log_tmp="$log_dir/tmp.log"
 #Logging Discord Webhook.
 config_file="$BASE_DIR/ark_discord_control_config.json"
-#discord_webhook=$(jq -r '.general.webhook // ""' "$config_file")
+discord_webhook=$(jq -r '.general.webhook // ""' "$config_file")
 
 # Define URLs for SteamCMD and Proton.
 STEAMCMD_URL="https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz"
@@ -80,16 +80,16 @@ check_dependencies() {
     # Detect the package manager
     if command -v apt-get >/dev/null 2>&1; then
         package_manager="apt-get"
-        dependencies=("wget" "tar" "grep" "libc6:i386" "libstdc++6:i386" "libncursesw6:i386" "python3" "libfreetype6:i386" "libfreetype6:amd64" "pkill" "cron")
+        dependencies=("wget" "tar" "grep" "libc6:i386" "libstdc++6:i386" "libncursesw6:i386" "python3" "libfreetype6:i386" "libfreetype6:amd64" "pkill" "cron" "dialog")
     elif command -v zypper >/dev/null 2>&1; then
         package_manager="zypper"
-        dependencies=("wget" "tar" "grep" "libX11-6-32bit" "libX11-devel-32bit" "gcc-32bit" "libexpat1-32bit" "libXext6-32bit" "python3" "pkill" "libfreetype6" "libfreetype6-32bit" "cron")
+        dependencies=("wget" "tar" "grep" "libX11-6-32bit" "libX11-devel-32bit" "gcc-32bit" "libexpat1-32bit" "libXext6-32bit" "python3" "pkill" "libfreetype6" "libfreetype6-32bit" "cron" "dialog")
     elif command -v dnf >/dev/null 2>&1; then
         package_manager="dnf"
-        dependencies=("wget" "tar" "grep" "glibc-devel.i686" "ncurses-devel.i686" "libstdc++-devel.i686" "python3" "freetype" "procps-ng" "cronie")
+        dependencies=("wget" "tar" "grep" "glibc-devel.i686" "ncurses-devel.i686" "libstdc++-devel.i686" "python3" "freetype" "procps-ng" "cronie" "dialog")
     elif command -v pacman >/dev/null 2>&1; then
         package_manager="pacman"
-        dependencies=("wget" "tar" "grep" "lib32-libx11" "gcc-multilib" "lib32-expat" "lib32-libxext" "python" "freetype2" "cronie")
+        dependencies=("wget" "tar" "grep" "lib32-libx11" "gcc-multilib" "lib32-expat" "lib32-libxext" "python" "freetype2" "cronie" "dialog")
     else
         log_message "${RED}Error: No supported package manager found on this system."
         exit 1
