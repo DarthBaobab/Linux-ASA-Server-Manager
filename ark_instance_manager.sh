@@ -1116,26 +1116,28 @@ send_rcon_command_to_all() {
 
 # Function to show running instances
 show_running_instances() {
-    log_message "${CYAN}Checking running instances..."
+    log_message "${CYAN}Checking running instances...${RESET}"
     local running_count=0
-    for instance in "$INSTANCES_DIR"/*; do
+    get_available_instances
+    for instance_name in "${available_instances[@]}"; do
+        instance="$INSTANCES_DIR/$instance_name"
         if [ -d "$instance" ]; then
-            instance_name=$(basename "$instance")
+            #instance_name=$(basename "$instance")
             # Load instance configuration
             load_instance_config "$instance_name" || continue
             # Check if the server is running
             if pgrep -f "ArkAscendedServer.exe.*AltSaveDirectoryName=$SAVE_DIR" > /dev/null; then
-                log_message "${GREEN}$instance_name"
+                log_message "${OK}$instance_name${RESET}"
                 ((running_count++)) || true
             else
-                log_message "${RED}$instance_name"
+                log_message "${ERROR}$instance_name${RESET}"
             fi
         fi
     done
     if [ $running_count -eq 0 ]; then
-        log_message "${CYAN}No instances are currently running."
+        log_message "${CYAN}No instances are currently running.${RESET}"
     else
-        log_message "${CYAN}Total running instances: $running_count"
+        log_message "${CYAN}Total running instances: $running_count${RESET}"
     fi
 }
 
