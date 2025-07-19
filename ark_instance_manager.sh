@@ -713,6 +713,19 @@ start_server() {
     rm -rf "$SERVER_FILES_DIR/ShooterGame/Saved/Config/WindowsServer" || true
     ln -s "$instance_config_dir" "$SERVER_FILES_DIR/ShooterGame/Saved/Config/WindowsServer" || true
 
+    # Backup the original Config directory if not already backed up
+    if [ ! -L "$SERVER_FILES_DIR/ShooterGame/Saved/SaveGames" ] && [ -d "$SERVER_FILES_DIR/ShooterGame/Saved/SaveGames" ]; then
+        mv "$SERVER_FILES_DIR/ShooterGame/Saved/SaveGames" "$SERVER_FILES_DIR/ShooterGame/Saved/SaveGames.bak" || true
+    fi
+
+    saveGames_path="$BASE_DIR/instances/${SAVE_DIR}/SaveGames"
+    mkdir -p "$saveGames_path"
+    # Vorherige Verlinkung/Ordner entfernen
+    rm -rf "$SERVER_FILES_DIR/ShooterGame/Saved/SaveGames" || true
+    # Symlink auf die instanzspezifischen SaveGames setzen
+    ln -s "$saveGames_path" "$SERVER_FILES_DIR/ShooterGame/Saved/SaveGames" || true
+
+
     ((gauge_stage++))
     gauge_progress $gauge_stage $gauge_steps
 
