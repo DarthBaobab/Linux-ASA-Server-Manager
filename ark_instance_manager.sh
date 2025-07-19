@@ -1375,7 +1375,7 @@ backup_instance_world() {
     fi
 
 	# Create backup directory
-	local backups_dir="$BASE_DIR/backups"
+	local backups_dir="$BASE_DIR/backups/$instance"
 	mkdir -p "$backups_dir"
 
 
@@ -1426,7 +1426,7 @@ backup_instance_world() {
 	local archive_name="${instance}_${world_folder}_${timestamp}.tar.gz"
 	local archive_path="$backups_dir/$archive_name"
 	log_message "${BLUE}Creating Backup: ${YELLOW}$archive_name"
-	tar -czf "$archive_path" -C "$instance_dir" "$world_folder"
+    tar -czf "$archive_path" -C "$BASE_DIR" "instances/${instance}" "server-files/ShooterGame/Saved/${instance}/${world_folder}"
 	if [ $? -eq 0 ]; then
 		log_message "${GREEN}✅ Backup successfully created: ${YELLOW}$archive_name"
 	else
@@ -1540,7 +1540,7 @@ restore_backup_to_instance() {
     # Extract the backup into $SERVER_FILES_DIR/ShooterGame/Saved/$target_instance/
     mkdir -p "$SERVER_FILES_DIR/ShooterGame/Saved/$target_instance"
     log_message "${BLUE}Extracting backup..."
-    tar -xzf "$backup_file" -C "$SERVER_FILES_DIR/ShooterGame/Saved/$target_instance/"
+    tar -xzf "$backup_file" -C "$BASE_DIR"
 
     if [ $? -eq 0 ]; then
         log_message "${GREEN}✅ Backup successfully loaded into instance '$target_instance'."
