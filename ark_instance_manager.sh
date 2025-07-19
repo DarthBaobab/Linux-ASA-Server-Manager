@@ -1888,20 +1888,50 @@ configure_companion_script() {
         return 0
     fi
 
+    # Nur die relevanten Zeilen extrahieren
+    TMP=$(mktemp)
+
+    awk '
+    /^\s*(instances|announcement_times|announcement_messages)=\(/ {capture=1}
+    capture {print}
+    /^\s*\)/ && capture {capture=0}
+    ' "$companion_script" > "$TMP"
+
+    # prüfen was extrahiert wurde
+    echo "--- Extrahiert ---"
+    cat "$TMP"
+    echo "-----------------"
+
+    # jetzt nur wenn Datei nicht leer ist:
+    if [ -s "$TMP" ]; then
+        source "$TMP"
+
+        #echo "Instances: ${instances[@]}"
+        #echo "Times: ${announcement_times[@]}"
+        #echo "Messages: ${announcement_messages[@]}"
+    fi
+
+    rm -f "$TMP"
+
+
     # Show them to the user
-    log_message "${CYAN}Available instances:"
+    #log_message "${CYAN}Available instances:"
     local i
+    local s
     for i in "${!available_instances[@]}"; do
-        log_message "$((i+1))) ${available_instances[$i]}"
+        #log_message "$((i+1))) ${available_instances[$i]}"
+        s="$s $((i+1))) ${available_instances[$i]}\n"
+        #log_message "$s"
     done
     log_message "Type the numbers of the instances you want to choose (space-separated), or type 'all' to select all."
-    read -r user_input
+    user_input=$(dialog --begin 1 5 --no-shadow --inputbox "Enter instance numbers (space-separated) or 'all' to select all:\n\nAvailable instances:\n${s}" 10 50 "${instances[@]}" 2>&1 >/dev/tty)
+    log_message "${user_input[@]}"
 
     local selected_instances=()
 
     # 2) Parse user selection
     if [[ "$user_input" == "all" ]]; then
-        selected_instances=("${available_instances[@]}")
+        selected_instances="all"
     else
         local choices=($user_input)
         for choice in "${choices[@]}"; do
@@ -1921,14 +1951,28 @@ configure_companion_script() {
 
     # 3) Ask for announcement times
     log_message "${CYAN}Enter announcement times in seconds (space-separated), e.g. '1800 1200 600 180 10':"
-    read -r -a user_times
+    #read -r -a user_times
+    default_times="${announcement_times[*]}"
+    user_times=($(dialog --begin 1 5 --inputbox "Enter announcement times in seconds (space-separated), e.g. '1800 1200 600 180 10':" 10 50 "${default_times}" 2>&1 >/dev/tty))
+
+    if [ ${#user_times[@]} -ne ${#announcement_messages[@]} ]; then
+    # leere Default-Liste bauen
+    default_messages=()
+    else
+        default_messages=("${announcement_messages[@]}")
+    fi
 
     # 4) Ask for corresponding announcement messages
-    log_message "${CYAN}Please enter one announcement message for each time above."
+    #log_message "${CYAN}Please enter one announcement message for each time above."
     user_messages=()
-    for time in "${user_times[@]}"; do
-        log_message "Message for $time seconds before restart:"
-        read -r msg
+    for i in "${!user_times[@]}"; do
+        time="${user_times[$i]}"
+    
+        default_msg=""
+        if [ "${#default_messages[@]}" -gt "$i" ]; then
+            default_msg="${default_messages[$i]}"
+        fi
+        msg=$(dialog --begin 1 5 --inputbox "Message for $time seconds before restart:" 10 50 "$default_msg" 2>&1 >/dev/tty)
         user_messages+=( "$msg" )
     done
 
@@ -1980,15 +2024,11 @@ configure_companion_script() {
         skip==0 { print }
     ' "$companion_script.bak" > "$companion_script"
 
-    log_message "${GREEN}Restart Manager script has been updated successfully."
+    dialog --begin 1 5 --no-shadow --msgbox "${GREEN}Restart Manager script has been updated successfully." 10 50
 
     # 5) Ask for cron job
-    log_message "${CYAN}Would you like to schedule a daily cron job for server restart? [y/N]"
-    read -r add_cron
-    if [[ "$add_cron" =~ ^[Yy]$ ]]; then
-        log_message "${CYAN}At what time should the daily restart occur?"
-        log_message "${YELLOW}(Use 24-hour format: HH:MM, e.g., '16:00' for 4 PM or '03:00' for 3 AM)"
-        read -r cron_time
+    if dialog --begin 1 5 --no-shadow --yesno "Would you like to schedule a daily cron job for server restart?" 10 50; then
+        cron_time=$(dialog --begin 1 5 --no-shadow --inputbox "Enter the time for the daily restart (HH:MM)\nUse 24-hour format: HH:MM, e.g., '16:00' for 4 PM or '03:00' for 3 AM" 10 50 "04:00" 2>&1 >/dev/tty)
         local cron_hour=$(echo "$cron_time" | cut -d':' -f1)
         local cron_min=$(echo "$cron_time" | cut -d':' -f2)
 
@@ -2000,7 +2040,11 @@ configure_companion_script() {
         log_message "$cron_min $cron_hour * * * $companion_script"
         ) | crontab -
 
-        log_message "${GREEN}Cron job scheduled daily at $cron_time."
+        dialog --begin 1 5 --no-shadow --msgbox "${GREEN}Cron job scheduled daily at $cron_time." 10 50
+    else
+        # Entferne alle Cron-Einträge, die dein companion_script enthalten:
+        (crontab -l 2>/dev/null | grep -v "$companion_script") | crontab -
+        dialog --begin 1 5 --no-shadow --msgbox "${YELLOW}No cron job scheduled or existing one removed." 10 50
     fi
 }
 
@@ -2163,7 +2207,8 @@ main_menu() {
                 fi
                 ;;
             12)
-                dialog --title "Information" --msgbox "Restart Manager Configuration is not available!"
+                configure_companion_script
+                #dialog --begin 1 5 --no-shadow  --title "Information" --msgbox "Restart Manager Configuration is not available!" 10 50
                 ;;
         esac
     done
