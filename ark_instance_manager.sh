@@ -1427,7 +1427,7 @@ backup_instance_world() {
 	local archive_path="$backups_dir/$archive_name"
 	log_message "${BLUE}Creating Backup: ${YELLOW}$archive_name"
     tar -czf "$archive_path" -C "$BASE_DIR" "instances/${instance}" "server-files/ShooterGame/Saved/${instance}/${world_folder}"
-	if [ $? -eq 0 ]; then
+    if [ $? -eq 0 ]; then
 		log_message "${GREEN}✅ Backup successfully created: ${YELLOW}$archive_name"
 	else
 		log_message "${RED}❌ Error creating the backup."
@@ -1961,7 +1961,7 @@ configure_companion_script() {
     else
         default_messages=("${announcement_messages[@]}")
     fi
-
+    
     # 4) Ask for corresponding announcement messages
     #log_message "${CYAN}Please enter one announcement message for each time above."
     user_messages=()
