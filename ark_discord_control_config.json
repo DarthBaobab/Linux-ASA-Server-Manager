@@ -2,11 +2,13 @@
   "general": {
     "asa_manager_path": "/home/ark/.local/bin/asa-manager",
     "token": "",
-	"webhook": "",
+	  "webhook": "",
     "command_prefix": "bf!",
     "admin_role": "ADMIN",
     "admin_channel_id": 1000000000000000000,
-    "log_channel_id": 1000000000000000000
+    "log_channel_id": 1000000000000000000,
+    "status_channel_id": 1000000000000000000,
+    "status_message_id": 1000000000000000000
   },
   "commands": {
     "update": {
