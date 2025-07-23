@@ -1066,6 +1066,7 @@ stop_all_instances() {
             stop_server "$instance_name" "no_gauge"
         fi
     done
+    move_log_backups
     log_message "${GREEN}All instances have been stopped."
 }
 
@@ -2124,6 +2125,25 @@ gauge_progress() {
     sleep 0.1
 }
 
+# Function to move log backups to a dedicated directory
+move_log_backups() {
+    local log_dir="$SERVER_FILES_DIR/ShooterGame/Saved/Logs"
+    local log_backup_dir="$log_dir/backups"
+    echo "${CYAN}Moving log backups to '$log_backup_dir'..."
+    # Create backup directory if it doesn't exist
+    mkdir -p "$log_backup_dir"
+
+    # Move all files with 'backup' in the name
+    for f in "$log_dir"/*; do
+        [ -f "$f" ] || continue  # nur Dateien
+        if [[ "$f" == *backup* ]] || [ -n "$(find "$f" -maxdepth 0 -mtime +2 -print)" ]; then
+            mv "$f" "$log_backup_dir/"
+            echo "${GREEN}Moved backup log file: $f"
+        fi
+    done
+}
+
+
 # Main menu using 'select'
 main_menu() {
     while true; do
@@ -2389,6 +2409,9 @@ else
                 exit 1
             fi
             delete_instance "$2"
+            ;;
+        log)
+            move_log_backups
             ;;
         *)
             instance_name=$1
