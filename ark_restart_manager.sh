@@ -113,7 +113,7 @@ get_available_instances() {
 	# Ausgabe als Liste – Zeile pro Instanz
 	printf "%s\n" "${available_instances[@]}"
 
-    return "${available_instances[@]}"
+    return 0
 
 }
 
@@ -180,7 +180,7 @@ announce_restart() {
 # ---------- MAIN SCRIPT ----------
 log_message "Starting ARK server restart process."
 
-available_instances=($(get_available_instances "$instances" "all"))
+mapfile -t available_instances < <(get_available_instances "$instances" "all")
 log_message "Instances to Stop: ${available_instances[*]}"
 
 # 1. Announce the restart with warning messages
@@ -199,13 +199,13 @@ log_message "Update completed."
 log_message "Wait 30 sec befor starting the servers"
 sleep 30
 
-available_instances=($(get_available_instances "$instances"))
+mapfile -t available_instances < <(get_available_instances "$instances")
 log_message "Instances to Start: ${available_instances[*]}"
 
 # 4. Start the server instances one by one (with wait time between starts)
 manage_instances "start" "$start_wait_time"
 
-available_wdkInstances=($(get_available_instances "$wdkInstances"))
+mapfile -t available_wdkInstances < <(get_available_instances "$wdkInstances")
 send_rcon_to_all "wdk"
 
 # 5. remove old Backups
