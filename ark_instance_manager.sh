@@ -761,11 +761,10 @@ start_server() {
         mv "$SERVER_FILES_DIR/ShooterGame/Saved/SaveGames" "$SERVER_FILES_DIR/ShooterGame/Saved/SaveGames.bak" || true
     fi
 
-    saveGames_path="$BASE_DIR/instances/${SAVE_DIR}/SaveGames"
+    local saveGames_path="$BASE_DIR/instances/$instance/SaveGames"
     mkdir -p "$saveGames_path"
-    # Vorherige Verlinkung/Ordner entfernen
+    # Link the instance SaveGames directory
     rm -rf "$SERVER_FILES_DIR/ShooterGame/Saved/SaveGames" || true
-    # Symlink auf die instanzspezifischen SaveGames setzen
     ln -s "$saveGames_path" "$SERVER_FILES_DIR/ShooterGame/Saved/SaveGames" || true
 
 
@@ -773,7 +772,7 @@ start_server() {
     gauge_progress $gauge_stage $gauge_steps
 
     # Ensure per-instance save directory exists
-    local save_dir="$SERVER_FILES_DIR/ShooterGame/Saved/SavedArks/$SAVE_DIR"
+    local save_dir="$SERVER_FILES_DIR/ShooterGame/Saved/SavedArks/$instance"
     mkdir -p "$save_dir" || true
 
     ((gauge_stage++))
@@ -849,6 +848,17 @@ stop_server() {
 
     ((gauge_stage++))
     gauge_progress $gauge_stage $gauge_steps
+
+    local instance_config_dir="$INSTANCES_DIR/$instance/Config"
+    # Link the instance Config directory
+    rm -rf "$SERVER_FILES_DIR/ShooterGame/Saved/Config/WindowsServer" || true
+    ln -s "$instance_config_dir" "$SERVER_FILES_DIR/ShooterGame/Saved/Config/WindowsServer" || true
+
+    # Link the instance SaveGames directory
+    local saveGames_path="$BASE_DIR/instances/$instance/SaveGames"
+    rm -rf "$SERVER_FILES_DIR/ShooterGame/Saved/SaveGames" || true
+    ln -s "$saveGames_path" "$SERVER_FILES_DIR/ShooterGame/Saved/SaveGames" || true
+
 
     load_instance_config "$instance" || return 1
 
