@@ -1968,8 +1968,8 @@ configure_companion_script() {
         s="$s $((i+1))) ${available_instances[$i]}\n"
         #log_message "$s"
     done
-    log_message "Type the numbers of the instances you want to choose (space-separated), or type 'all' to select all."
-    user_input=$(dialog --begin 1 5 --no-shadow --inputbox "Enter instance numbers (space-separated) or 'all' to select all:\n\nAvailable instances:\n${s}" 10 50 "${instances[@]}" 2>&1 >/dev/tty)
+    log_message "Type the numbers of the instances you want to choose for a daily restart (space-separated), or type 'all' to select all."
+    user_input=$(dialog --begin 1 5 --no-shadow --inputbox "Enter instance numbers for a daily restart (space-separated) or 'all' to select all:\n\nAvailable instances:\n${s}" 10 50 "${instances[@]}" 2>&1 >/dev/tty)
     log_message "${user_input[@]}"
 
     local selected_instances=()
@@ -1990,6 +1990,32 @@ configure_companion_script() {
     fi
 
     if [ ${#selected_instances[@]} -eq 0 ]; then
+        log_message "${RED}No valid instances selected."
+        return 1
+    fi
+
+    log_message "Type the numbers of the instances you want to choose for a daily WildDinoKill (space-separated), or type 'all' to select all."
+    user_input=$(dialog --begin 1 5 --no-shadow --inputbox "Enter instance numbers for a daily WildDinoKill (space-separated) or 'all' to select all:\n\nAvailable instances:\n${s}" 10 50 "${wdkInstances[@]}" 2>&1 >/dev/tty)
+    log_message "${user_input[@]}"
+
+    local selected_wdkInstances=()
+
+    # 2) Parse user selection
+    if [[ "$user_input" == "all" ]]; then
+        selected_wdkInstances="all"
+    else
+        local choices=($user_input)
+        for choice in "${choices[@]}"; do
+            local idx=$((choice - 1))
+            if (( idx >= 0 && idx < ${#available_instances[@]} )); then
+                selected_wdkInstances+=("${available_instances[$idx]}")
+            else
+                log_message "${RED}Warning: '$choice' is not a valid selection and will be ignored."
+            fi
+        done
+    fi
+
+    if [ ${#selected_wdkInstances[@]} -eq 0 ]; then
         log_message "${RED}No valid instances selected."
         return 1
     fi
@@ -2027,6 +2053,11 @@ configure_companion_script() {
         instances_str+="\"$inst\" "
     done
 
+    local wdkInstances_str=""
+    for inst in "${selected_wdkInstances[@]}"; do
+        wdkInstances_str+="\"$inst\" "
+    done
+
     local times_str=""
     for t in "${user_times[@]}"; do
         times_str+="$t "
@@ -2041,6 +2072,9 @@ configure_companion_script() {
 
     # Define your server instances here (use the names you use in ark_instance_manager.sh)
     instances=($instances_str)
+
+    # Define instances for wild dino killing
+    wdkInstances=($wdkInstances_str)
 
     # Define the exact announcement times in seconds
     announcement_times=($times_str)
