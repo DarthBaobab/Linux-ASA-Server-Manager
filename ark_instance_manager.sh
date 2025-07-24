@@ -315,6 +315,48 @@ is_server_running() {
     fi
 }
 
+wait_for_server_ready() {
+    local instance=$1
+    local log_file="$SERVER_FILES_DIR/ShooterGame/Saved/Logs/${instance}.log"
+    local timeout=${2:-300}
+    local waited=0
+
+    while [ $waited -lt $timeout ]; do
+        if [ -f "$log_file" ]; then
+            # Alter berechnen
+            now=$(date +%s)
+            mtime=$(stat -c %Y "$log_file")
+            age=$(( now - mtime ))
+
+            if [ "$age" -le 10 ]; then
+                log_message "Logdatei existiert und wurde vor $age Sekunden geändert."
+                break
+            fi
+        fi
+
+        sleep 1
+        ((waited++))
+    done
+
+    if [ $waited -ge $timeout ]; then
+        log_message "${RED}Timeout: Keine Änderungen innerhalb ${timeout}s erkannt."
+        return 1
+    fi
+
+    waited=0
+    while ! grep -q "Server has completed startup and is now advertising for join" "$log_file"; do
+        sleep 2
+        ((waited+=2))
+        if [ $waited -ge $timeout ]; then
+            log_message "${RED}Server $instance did not become ready in time."
+            return 1
+        fi
+    done
+    log_message "${GREEN}Server $instance ready!"
+    return 0
+}
+
+
 # Function to install or update the base server
 install_base_server() {
     local running_instances=0
@@ -772,16 +814,14 @@ start_server() {
     gauge_progress $gauge_stage $gauge_steps
 
     # Wait for the server to start and check if it's running
-    local timeout=60
+    local timeout=300
     local waited=0
-    while ! is_server_running "$instance"; do
-        sleep 2
-        ((waited += 2))
-        if [ $waited -ge $timeout ]; then
-            log_message "${RED}Server for instance $instance failed to start within $timeout seconds."
+    
+    # Statt Prozess-Schleife → warte auf Log-Ready:
+    if ! wait_for_server_ready "$instance" "$timeout"; then
+        log_message "${RED}Instanz $instance ist nicht sauber gestartet."
             return 1
         fi
-    done
 
     log_message "${GREEN}Server for instance $instance is now running and operational."
 
@@ -1034,9 +1074,10 @@ start_all_instances() {
 
             # Attempt to start the server
             if start_server "$instance_name" "no_gauge"; then
-                # Only wait 30 seconds if the server started successfully
-                log_message "${YELLOW}Waiting 30 seconds before starting the next instance..."
-                sleep 30
+                wait_time=5
+                # Only wait $wait_time seconds if the server started successfully
+                log_message "${YELLOW}Waiting $wait_time seconds before starting the next instance..."
+                sleep $wait_time
             else
                 log_message "${RED}Server $instance_name could not be started due to conflicts or errors. Skipping wait time."
             fi
