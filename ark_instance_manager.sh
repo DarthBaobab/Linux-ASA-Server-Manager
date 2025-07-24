@@ -820,8 +820,8 @@ start_server() {
     # Statt Prozess-Schleife → warte auf Log-Ready:
     if ! wait_for_server_ready "$instance" "$timeout"; then
         log_message "${RED}Instanz $instance ist nicht sauber gestartet."
-            return 1
-        fi
+        return 1
+    fi
 
     log_message "${GREEN}Server for instance $instance is now running and operational."
 
@@ -2072,7 +2072,7 @@ configure_companion_script() {
 
     # Define your server instances here (use the names you use in ark_instance_manager.sh)
     instances=($instances_str)
-
+    
     # Define instances for wild dino killing
     wdkInstances=($wdkInstances_str)
 
