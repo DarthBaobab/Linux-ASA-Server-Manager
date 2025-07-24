@@ -2451,7 +2451,7 @@ else
             fi
             ;;
         update)
-              run_with_live_dialog "Install/Update Base Server" install_base_server
+              install_base_server
             ;;
         update_check)
             checkForUpdate
