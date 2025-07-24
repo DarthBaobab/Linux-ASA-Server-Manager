@@ -6,6 +6,7 @@
 
 # Define your server instances here (use the names you use in ark_instance_manager.sh)
 instances=("all" )
+wdkInstances=("KrachBumPeng")
 
 # Define the exact announcement times in seconds
 announcement_times=(1800 1200 600 90 30 10 )
@@ -51,7 +52,7 @@ config_file="$script_dir/ark_discord_control_config.json"
 discord_webhook=$(jq -r '.general.webhook' "$config_file")
 
 # Time to wait between starting instances (in seconds). The server needs enough time to load the config, before the next instance starts.
-start_wait_time=30
+start_wait_time=5
 
 # Function to log messages
 log_message() {
@@ -83,11 +84,12 @@ log_message() {
 
 # Function to get list of instances
 get_available_instances() {
-	if [[ "${instances[0]}" == "all" ]]; then
+	local input="$1"
+    if [[ "${input[0]}" == "all" ]]; then
 		local instances_dir="$script_dir/instances"
-		local include_disabled="$1"
+		local include_disabled="$2"
 		# Clear the array to avoid stale entries
-		available_instances=()
+		local available_instances=()
 
 		if [[ ! -d "$instances_dir" ]]; then
 			log_message "❌ Instances directory '$instances_dir' does not exist."
@@ -105,12 +107,14 @@ get_available_instances() {
 		done
 
 	else
-		available_instances=("${instances[@]}")
+		available_instances=("${input[@]}")
 	fi
-	
+
 	# Ausgabe als Liste – Zeile pro Instanz
 	printf "%s\n" "${available_instances[@]}"
-	
+
+    return "${available_instances[@]}"
+
 }
 
 # Function to execute a command for each instance (with optional wait time)
@@ -135,10 +139,20 @@ manage_instances() {
 # Function to send RCON command to all instances
 send_rcon_to_all() {
     local command=$1
-    for instance in "${available_instances[@]}"; do
-        log_message "Sending RCON command '$command' to instance $instance..."
-        $ark_manager "$instance" send_rcon "$command"
-    done
+    if [ -z "$command" ]; then
+        log_message "Error: No RCON command provided."
+        return 1
+    elif [ "$command" == "wdk" ]; then
+        for instance in "${available_wdkInstances[@]}"; do
+            log_message "Sending WildDinoKill command to instance $instance..."
+            $ark_manager "$instance" send_rcon "destroywilddinos"
+        done
+    else
+        for instance in "${available_instances[@]}"; do
+            log_message "Sending RCON command '$command' to instance $instance..."
+            $ark_manager "$instance" send_rcon "$command"
+        done
+    fi
 }
 
 # Function to announce the restart to all players
@@ -166,7 +180,7 @@ announce_restart() {
 # ---------- MAIN SCRIPT ----------
 log_message "Starting ARK server restart process."
 
-get_available_instances "all"
+available_instances=($(get_available_instances "$instances" "all"))
 log_message "Instances to Stop: ${available_instances[*]}"
 
 # 1. Announce the restart with warning messages
@@ -185,11 +199,14 @@ log_message "Update completed."
 log_message "Wait 30 sec befor starting the servers"
 sleep 30
 
-get_available_instances
+available_instances=($(get_available_instances "$instances"))
 log_message "Instances to Start: ${available_instances[*]}"
 
 # 4. Start the server instances one by one (with wait time between starts)
 manage_instances "start" "$start_wait_time"
+
+available_wdkInstances=($(get_available_instances "$wdkInstances"))
+send_rcon_to_all "wdk"
 
 # 5. remove old Backups
 $ark_manager cleanup_backups
